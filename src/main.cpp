@@ -43,6 +43,7 @@ int main()
     }
 
     ShutdownUI();
+    ShutdownRenderer(renderContext);
     CloseWindow();
 
     return 0;

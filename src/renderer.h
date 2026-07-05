@@ -10,7 +10,9 @@ struct RenderContext
     float CameraAngleX;
     float CameraAngleY;
     float CameraRadius;
+    Model SphereModel;
 };
 
 void InitializeRenderer(RenderContext &outContext);
 void DrawScene(RenderContext &context, const Planet &planet);
+void ShutdownRenderer(RenderContext &context);

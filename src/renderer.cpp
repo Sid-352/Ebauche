@@ -12,6 +12,9 @@ void InitializeRenderer(RenderContext &outContext)
     outContext.Camera.up = {0.0f, 1.0f, 0.0f};
     outContext.Camera.fovy = 45.0f;
     outContext.Camera.projection = CAMERA_PERSPECTIVE;
+
+    Mesh sphereMesh = GenMeshSphere(1.0f, 16, 16);
+    outContext.SphereModel = LoadModelFromMesh(sphereMesh);
 }
 
 void DrawScene(RenderContext &context, const Planet &planet)
@@ -38,9 +41,14 @@ void DrawScene(RenderContext &context, const Planet &planet)
 
     BeginMode3D(context.Camera);
 
-    DrawSphere({0.0f, 0.0f, 0.0f}, 2.0f, RED);
+    DrawModel(context.SphereModel, {0.0f, 0.0f, 0.0f}, 2.0f, RED);
     DrawCircle3D({0.0f, 0.0f, 0.0f}, planet.OrbitRadius, {1.0f, 0.0f, 0.0f}, 90.0f, DARKGRAY);
-    DrawSphere(planet.Position, planet.Radius, planet.BodyColor);
+    DrawModel(context.SphereModel, planet.Position, planet.Radius, planet.BodyColor);
 
     EndMode3D();
+}
+
+void ShutdownRenderer(RenderContext &context)
+{
+    UnloadModel(context.SphereModel);
 }

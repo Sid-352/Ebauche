@@ -1,0 +1,2 @@
+Checks: 'clang-analyzer-*,bugprone-*,performance-*,misc-*,readability-*,modernize-*,-readability-magic-numbers,-modernize-use-trailing-return-type,-readability-uppercase-literal-suffix,-bugprone-easily-swappable-parameters,-misc-include-cleaner,-bugprone-branch-clone'
+WarningsAsErrors: ''
