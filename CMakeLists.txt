@@ -54,11 +54,12 @@ target_link_libraries(imgui_lib PRIVATE raylib)
 
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    src/simulation.cpp
+    src/scanner.cpp
+    src/physics.cpp
     src/renderer.cpp
     src/ui_overlay.cpp
     src/manifest_loader.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib imgui_lib nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME} PRIVATE raylib imgui_lib)
 target_include_directories(${PROJECT_NAME} PRIVATE src)

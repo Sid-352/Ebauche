@@ -17,7 +17,7 @@ void InitializeRenderer(RenderContext &outContext)
     outContext.SphereModel = LoadModelFromMesh(sphereMesh);
 }
 
-void DrawScene(RenderContext &context, const std::vector<Planet> &planets)
+void DrawScene(RenderContext &context, const Graph &graph)
 {
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_LEFT))
     {
@@ -41,12 +41,15 @@ void DrawScene(RenderContext &context, const std::vector<Planet> &planets)
 
     BeginMode3D(context.Camera);
 
-    DrawModel(context.SphereModel, {0.0f, 0.0f, 0.0f}, 2.0f, RED);
-    
-    for (const auto &planet : planets)
+    for (const auto &edge : graph.Edges)
     {
-        DrawCircle3D({0.0f, 0.0f, 0.0f}, planet.OrbitRadius, {1.0f, 0.0f, 0.0f}, 90.0f, DARKGRAY);
-        DrawModel(context.SphereModel, planet.Position, planet.Radius, planet.BodyColor);
+        DrawLine3D(graph.Nodes[edge.SourceIndex].Position, graph.Nodes[edge.TargetIndex].Position, DARKGRAY);
+    }
+    
+    for (const auto &node : graph.Nodes)
+    {
+        Color color = node.IsDirectory ? BLUE : GREEN;
+        DrawModel(context.SphereModel, node.Position, node.Radius, color);
     }
 
     EndMode3D();

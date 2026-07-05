@@ -1,27 +1,31 @@
 #include "engine.h"
+#include "scanner.h"
 #include "manifest_loader.h"
-#include "math_core.h"
+#include "physics.h"
 #include "renderer.h"
-#include "simulation.h"
 #include "ui_overlay.h"
 #include <raylib.h>
 
 int main()
 {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
-    InitWindow(1280, 720, "Ebauche v0 - Celestial Viewer");
+    InitWindow(1280, 720, "Ebauche");
     SetTargetFPS(60);
 
     EngineState engineState;
-    engineState.GlobalTime = 0.0f;
     engineState.DeltaTime = 0.0f;
+    engineState.GlobalTime = 0.0f;
     engineState.IsZenModeEnabled = false;
     engineState.SimulationSpeed = 1.0f;
 
     RenderContext renderContext;
     InitializeRenderer(renderContext);
 
-    std::vector<Planet> planets = LoadPlanets("manifest");
+    Graph graph;
+    if (!LoadGraphManifest("abominations", graph))
+    {
+        ScanDirectory("N:/Projects/Abominations Beyond Comprehension", graph);
+        SaveGraphManifest("abominations", graph);
+    }
 
     InitializeUI();
 
@@ -35,9 +39,9 @@ int main()
             engineState.IsZenModeEnabled = !engineState.IsZenModeEnabled;
         }
 
-        UpdateSimulation(planets, engineState);
+        UpdatePhysics(graph, engineState.DeltaTime * engineState.SimulationSpeed);
 
-        DrawScene(renderContext, planets);
+        DrawScene(renderContext, graph);
         DrawUI(engineState);
         EndDrawing();
     }

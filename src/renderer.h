@@ -1,9 +1,8 @@
 #pragma once
 
 #include "engine.h"
-#include "simulation.h"
+#include "graph.h"
 #include <raylib.h>
-#include <vector>
 
 struct RenderContext
 {
@@ -15,5 +14,5 @@ struct RenderContext
 };
 
 void InitializeRenderer(RenderContext &outContext);
-void DrawScene(RenderContext &context, const std::vector<Planet> &planets);
+void DrawScene(RenderContext &context, const Graph &graph);
 void ShutdownRenderer(RenderContext &context);

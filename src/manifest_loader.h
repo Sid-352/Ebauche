@@ -1,7 +1,7 @@
 #pragma once
 
-#include "simulation.h"
+#include "graph.h"
 #include <string>
-#include <vector>
 
-std::vector<Planet> LoadPlanets(const std::string &baseName);
+bool LoadGraphManifest(const std::string &path, Graph &outGraph);
+void SaveGraphManifest(const std::string &path, const Graph &graph);
