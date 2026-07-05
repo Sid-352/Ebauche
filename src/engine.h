@@ -10,4 +10,5 @@ struct EngineState
     float SimulationSpeed;
     float RenderDistance;
     double PhysicsTimeMs;
+    bool ShowGalacticCenter = true;
 };

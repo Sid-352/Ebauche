@@ -5,6 +5,16 @@
 #include <rlgl.h>
 #include <vector>
 
+struct ColoredPoint
+{
+    Vector3 Pos;
+    Color Col;
+    float Size;
+    float Angle;
+};
+
+static std::vector<ColoredPoint> backgroundStars;
+
 void InitializeRenderer(RenderContext &outContext)
 {
     outContext.CameraSpeed = 400.0f;
@@ -52,15 +62,30 @@ void InitializeRenderer(RenderContext &outContext)
 
         outContext.DirModels[i].materials[0].maps[MATERIAL_MAP_ALBEDO].color = bucketColor;
     }
-}
 
-struct ColoredPoint
-{
-    Vector3 Pos;
-    Color Col;
-    float Size;
-    float Angle;
-};
+    if (backgroundStars.empty())
+    {
+        for (int i = 0; i < 15000; i++)
+        {
+            Vector3 pos = {(float)GetRandomValue(-3000, 3000), (float)GetRandomValue(-3000, 3000),
+                           (float)GetRandomValue(-3000, 3000)};
+
+            int colorType = GetRandomValue(0, 3);
+            Color col;
+            if (colorType == 0)
+                col = {200, 220, 255, 255};
+            else if (colorType == 1)
+                col = {255, 255, 255, 255};
+            else if (colorType == 2)
+                col = {255, 240, 200, 255};
+            else
+                col = {180, 200, 255, 255};
+
+            float size = (float)GetRandomValue(5, 20) / 10.0f;
+            backgroundStars.push_back({pos, col, size, 0.0f});
+        }
+    }
+}
 
 void UpdateCameraFreecam(Camera3D *camera, float dt)
 {
@@ -200,6 +225,53 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         }
     }
 
+    if (!backgroundStars.empty())
+    {
+        Vector3 camRight = right;
+        Vector3 camUp = Vector3CrossProduct(forward, camRight);
+
+        rlDisableBackfaceCulling();
+        rlBegin(RL_TRIANGLES);
+        float wrapSize = 6000.0f;
+
+        Vector3 circleOffsets[8];
+        for (int k = 0; k < 8; k++)
+        {
+            float angle = k * (PI / 4.0f);
+            float ca = cosf(angle);
+            float sa = sinf(angle);
+            circleOffsets[k] = Vector3Add(Vector3Scale(camRight, ca), Vector3Scale(camUp, sa));
+        }
+
+        for (const auto &pt : backgroundStars)
+        {
+            float dx = pt.Pos.x - camPos.x;
+            float dy = pt.Pos.y - camPos.y;
+            float dz = pt.Pos.z - camPos.z;
+
+            dx -= wrapSize * roundf(dx / wrapSize);
+            dy -= wrapSize * roundf(dy / wrapSize);
+            dz -= wrapSize * roundf(dz / wrapSize);
+
+            float finalX = camPos.x + dx;
+            float finalY = camPos.y + dy;
+            float finalZ = camPos.z + dz;
+
+            float s = pt.Size;
+            rlColor4ub(pt.Col.r, pt.Col.g, pt.Col.b, pt.Col.a);
+            for (int k = 0; k < 8; k++)
+            {
+                rlVertex3f(finalX, finalY, finalZ);
+                rlVertex3f(finalX + circleOffsets[k].x * s, finalY + circleOffsets[k].y * s,
+                           finalZ + circleOffsets[k].z * s);
+                rlVertex3f(finalX + circleOffsets[(k + 1) % 8].x * s, finalY + circleOffsets[(k + 1) % 8].y * s,
+                           finalZ + circleOffsets[(k + 1) % 8].z * s);
+            }
+        }
+        rlEnd();
+        rlEnableBackfaceCulling();
+    }
+
     for (int i = 0; i < 10; i++)
     {
         if (!dirTransforms[i].empty())
@@ -255,6 +327,56 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
                    {0.0f, 0.0f, (float)context.Target.texture.width, (float)-context.Target.texture.height},
                    {0.0f, 0.0f}, WHITE);
     EndShaderMode();
+
+    if (state.ShowGalacticCenter && !state.IsZenModeEnabled)
+    {
+        Vector2 centerScreen = GetWorldToScreen(Vector3{0, 0, 0}, context.Camera);
+        float screenW = (float)GetScreenWidth();
+        float screenH = (float)GetScreenHeight();
+
+        Vector3 dirToCenter = Vector3Normalize(Vector3Subtract(Vector3{0, 0, 0}, context.Camera.position));
+        Vector3 camForward = Vector3Normalize(Vector3Subtract(context.Camera.target, context.Camera.position));
+        bool isBehind = Vector3DotProduct(dirToCenter, camForward) < 0.0f;
+
+        if (isBehind)
+        {
+            centerScreen.x = screenW - centerScreen.x;
+            centerScreen.y = screenH - centerScreen.y;
+        }
+
+        float pad = 40.0f;
+        bool isOffscreen = centerScreen.x < pad || centerScreen.x > screenW - pad || centerScreen.y < pad ||
+                           centerScreen.y > screenH - pad || isBehind;
+
+        if (isOffscreen)
+        {
+            Vector2 clampedPos = centerScreen;
+            clampedPos.x = fmaxf(pad, fminf(screenW - pad, clampedPos.x));
+            clampedPos.y = fmaxf(pad, fminf(screenH - pad, clampedPos.y));
+
+            Vector2 dir = Vector2Normalize(Vector2Subtract(centerScreen, clampedPos));
+            if (isBehind && centerScreen.x > pad && centerScreen.x < screenW - pad && centerScreen.y > pad &&
+                centerScreen.y < screenH - pad)
+            {
+                clampedPos.y = screenH - pad;
+                dir = {0.0f, 1.0f};
+            }
+
+            Vector2 p1 = Vector2Add(clampedPos, Vector2Scale(dir, 15.0f));
+            Vector2 p2 =
+                Vector2Add(clampedPos, Vector2Add(Vector2Scale(dir, -10.0f), Vector2Scale({-dir.y, dir.x}, 10.0f)));
+            Vector2 p3 =
+                Vector2Add(clampedPos, Vector2Add(Vector2Scale(dir, -10.0f), Vector2Scale({dir.y, -dir.x}, 10.0f)));
+
+            DrawTriangle(p1, p2, p3, {255, 200, 0, 200});
+            DrawText("Galactic Center", (int)clampedPos.x - 40, (int)clampedPos.y - 30, 10, {255, 200, 0, 200});
+        }
+        else
+        {
+            DrawCircleLines((int)centerScreen.x, (int)centerScreen.y, 10.0f, {255, 200, 0, 100});
+            DrawText("Galactic Center", (int)centerScreen.x + 15, (int)centerScreen.y - 5, 10, {255, 200, 0, 100});
+        }
+    }
 }
 
 void UpdateGraphAnimation(Graph &graph, float dt)
