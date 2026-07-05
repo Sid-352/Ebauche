@@ -9,6 +9,8 @@ struct RenderContext
     Camera3D Camera;
     float CameraSpeed;
     Model DirModels[10];
+    RenderTexture2D Target;
+    Shader PostProcessingShader;
 };
 
 void InitializeRenderer(RenderContext &outContext);

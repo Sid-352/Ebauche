@@ -19,6 +19,8 @@ struct Node
     float OrbitSpeed = 0.0f;
     float YOffset = 0.0f;
     float OrbitTilt = 0.0f;
+    float SpinAngle = 0.0f;
+    float SpinSpeed = 0.0f;
 };
 
 struct Edge

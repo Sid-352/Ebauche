@@ -19,6 +19,11 @@ void InitializeRenderer(RenderContext &outContext)
     Shader instancingShader = LoadShader(TextFormat("resources/shaders/glsl330/instancing.vs"),
                                          TextFormat("resources/shaders/glsl330/instancing.fs"));
     instancingShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instancingShader, "instanceTransform");
+    instancingShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instancingShader, "viewPos");
+
+    outContext.PostProcessingShader = LoadShader(0, TextFormat("resources/shaders/glsl330/bloom.fs"));
+
+    outContext.Target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 
     for (int i = 0; i < 10; i++)
     {
@@ -54,6 +59,7 @@ struct ColoredPoint
     Vector3 Pos;
     Color Col;
     float Size;
+    float Angle;
 };
 
 void UpdateCameraFreecam(Camera3D *camera, float dt)
@@ -111,9 +117,18 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
 
     context.Camera.target = Vector3Add(context.Camera.position, forward);
 
-    BeginDrawing();
-    ClearBackground({5, 5, 10, 255});
+    Shader instancingShader = context.DirModels[0].materials[0].shader;
+    SetShaderValue(instancingShader, instancingShader.locs[SHADER_LOC_VECTOR_VIEW], &context.Camera.position,
+                   SHADER_UNIFORM_VEC3);
 
+    if (IsWindowResized())
+    {
+        UnloadRenderTexture(context.Target);
+        context.Target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+    }
+
+    BeginTextureMode(context.Target);
+    ClearBackground(BLACK);
     BeginMode3D(context.Camera);
 
     static std::vector<Matrix> dirTransforms[10];
@@ -140,7 +155,7 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         if (apparentSize < 0.000000001f)
             continue;
 
-        float intensity = log10f(node.Mass + 1.0f) / 9.0f; // 1GB file = max intensity (log10 = 9)
+        float intensity = log10f(node.Mass + 1.0f) / 9.0f;
         if (intensity > 1.0f)
             intensity = 1.0f;
         if (intensity < 0.0f)
@@ -158,7 +173,6 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         else
         {
             Color ptColor;
-            // More striking cosmic color gradient
             float t = intensity;
             if (t < 0.25f)
             {
@@ -182,7 +196,7 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
             }
 
             float size = 0.3f + (intensity * state.FileSizeMultiplier);
-            filePoints.push_back({node.Position, ptColor, size});
+            filePoints.push_back({node.Position, ptColor, size, node.SpinAngle});
         }
     }
 
@@ -205,10 +219,16 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         for (const auto &pt : filePoints)
         {
             float s = pt.Size;
-            Vector3 p0_offset = Vector3Add(Vector3Scale(camRight, -s), Vector3Scale(camUp, -s));
-            Vector3 p1_offset = Vector3Add(Vector3Scale(camRight, s), Vector3Scale(camUp, -s));
-            Vector3 p2_offset = Vector3Add(Vector3Scale(camRight, s), Vector3Scale(camUp, s));
-            Vector3 p3_offset = Vector3Add(Vector3Scale(camRight, -s), Vector3Scale(camUp, s));
+            float cosA = cosf(pt.Angle);
+            float sinA = sinf(pt.Angle);
+
+            Vector3 localRight = Vector3Add(Vector3Scale(camRight, cosA), Vector3Scale(camUp, sinA));
+            Vector3 localUp = Vector3Add(Vector3Scale(camRight, -sinA), Vector3Scale(camUp, cosA));
+
+            Vector3 p0_offset = Vector3Add(Vector3Scale(localRight, -s), Vector3Scale(localUp, -s));
+            Vector3 p1_offset = Vector3Add(Vector3Scale(localRight, s), Vector3Scale(localUp, -s));
+            Vector3 p2_offset = Vector3Add(Vector3Scale(localRight, s), Vector3Scale(localUp, s));
+            Vector3 p3_offset = Vector3Add(Vector3Scale(localRight, -s), Vector3Scale(localUp, s));
 
             rlColor4ub(pt.Col.r, pt.Col.g, pt.Col.b, pt.Col.a);
             rlVertex3f(pt.Pos.x + p0_offset.x, pt.Pos.y + p0_offset.y, pt.Pos.z + p0_offset.z);
@@ -221,6 +241,20 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
     }
 
     EndMode3D();
+    EndTextureMode();
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+
+    float resolution[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
+    SetShaderValue(context.PostProcessingShader, GetShaderLocation(context.PostProcessingShader, "resolution"),
+                   resolution, SHADER_UNIFORM_VEC2);
+
+    BeginShaderMode(context.PostProcessingShader);
+    DrawTextureRec(context.Target.texture,
+                   {0.0f, 0.0f, (float)context.Target.texture.width, (float)-context.Target.texture.height},
+                   {0.0f, 0.0f}, WHITE);
+    EndShaderMode();
 }
 
 void UpdateGraphAnimation(Graph &graph, float dt)
@@ -231,6 +265,7 @@ void UpdateGraphAnimation(Graph &graph, float dt)
             continue;
 
         node.OrbitAngle += node.OrbitSpeed * dt;
+        node.SpinAngle += node.SpinSpeed * dt;
 
         Vector3 parentPos = graph.Nodes[node.ParentIndex].Position;
         node.Position.x = parentPos.x + cosf(node.OrbitAngle) * node.OrbitRadius;
@@ -241,6 +276,9 @@ void UpdateGraphAnimation(Graph &graph, float dt)
 
 void ShutdownRenderer(RenderContext &context)
 {
+    UnloadShader(context.PostProcessingShader);
+    UnloadRenderTexture(context.Target);
+
     for (int i = 0; i < 10; i++)
     {
         UnloadModel(context.DirModels[i]);

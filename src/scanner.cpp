@@ -154,11 +154,10 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
 
             if (outGraph.Nodes[childIdx].IsDirectory)
             {
-                float r =
-                    outGraph.Nodes[i].Radius + 10.0f + (rRandom * rRandom) * 3500.0f; // Dense center, sparse edges
-                float thickness = 300.0f * (1.0f - rRandom);                          // Thick in center, flat at edges
+                float r = outGraph.Nodes[i].Radius + 10.0f + (rRandom * rRandom) * 3500.0f;
+                float thickness = 300.0f * (1.0f - rRandom);
                 float yOffset = ((float)GetRandomValue(-1000, 1000) / 1000.0f) * thickness;
-                float tilt = ((float)GetRandomValue(-500, 500) / 1000.0f); // Random 3D inclination
+                float tilt = ((float)GetRandomValue(-500, 500) / 1000.0f);
 
                 outGraph.Nodes[childIdx].ParentIndex = i;
                 outGraph.Nodes[childIdx].OrbitRadius = r;
@@ -166,6 +165,8 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 outGraph.Nodes[childIdx].OrbitSpeed = ((float)GetRandomValue(1, 20) / 1000.0f);
                 outGraph.Nodes[childIdx].YOffset = yOffset;
                 outGraph.Nodes[childIdx].OrbitTilt = tilt;
+                outGraph.Nodes[childIdx].SpinAngle = ((float)GetRandomValue(0, 628) / 100.0f);
+                outGraph.Nodes[childIdx].SpinSpeed = ((float)GetRandomValue(-50, 50) / 1000.0f);
 
                 outGraph.Nodes[childIdx].Position = {outGraph.Nodes[i].Position.x + cosf(theta) * r,
                                                      outGraph.Nodes[i].Position.y + yOffset,
@@ -173,10 +174,10 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
             }
             else
             {
-                float r = outGraph.Nodes[i].Radius + 1.0f + (rRandom * rRandom) * 150.0f; // Asteroid belt around folder
+                float r = outGraph.Nodes[i].Radius + 1.0f + (rRandom * rRandom) * 150.0f;
                 float thickness = 20.0f * (1.0f - rRandom);
                 float yOffset = ((float)GetRandomValue(-1000, 1000) / 1000.0f) * thickness;
-                float tilt = ((float)GetRandomValue(-150, 150) / 1000.0f); // Asteroids have slight wobble
+                float tilt = ((float)GetRandomValue(-150, 150) / 1000.0f);
 
                 outGraph.Nodes[childIdx].ParentIndex = i;
                 outGraph.Nodes[childIdx].OrbitRadius = r;
@@ -184,6 +185,8 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 outGraph.Nodes[childIdx].OrbitSpeed = ((float)GetRandomValue(10, 100) / 100.0f);
                 outGraph.Nodes[childIdx].YOffset = yOffset;
                 outGraph.Nodes[childIdx].OrbitTilt = tilt;
+                outGraph.Nodes[childIdx].SpinAngle = ((float)GetRandomValue(0, 628) / 100.0f);
+                outGraph.Nodes[childIdx].SpinSpeed = ((float)GetRandomValue(-200, 200) / 1000.0f);
 
                 outGraph.Nodes[childIdx].Position = {outGraph.Nodes[i].Position.x + cosf(theta) * r,
                                                      outGraph.Nodes[i].Position.y + yOffset,
