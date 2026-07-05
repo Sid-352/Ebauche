@@ -4,7 +4,8 @@
 bool LoadGraphManifest(const std::string &path, Graph &outGraph)
 {
     std::ifstream file(path + ".bin", std::ios::binary);
-    if (!file.is_open()) return false;
+    if (!file.is_open())
+        return false;
 
     size_t nodeCount = 0;
     file.read(reinterpret_cast<char *>(&nodeCount), sizeof(nodeCount));
@@ -22,7 +23,8 @@ bool LoadGraphManifest(const std::string &path, Graph &outGraph)
 void SaveGraphManifest(const std::string &path, const Graph &graph)
 {
     std::ofstream file(path + ".bin", std::ios::binary | std::ios::trunc);
-    if (!file.is_open()) return;
+    if (!file.is_open())
+        return;
 
     size_t nodeCount = graph.Nodes.size();
     file.write(reinterpret_cast<const char *>(&nodeCount), sizeof(nodeCount));

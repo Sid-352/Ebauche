@@ -59,6 +59,7 @@ add_executable(${PROJECT_NAME}
     src/renderer.cpp
     src/ui_overlay.cpp
     src/manifest_loader.cpp
+    src/logger.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib imgui_lib)

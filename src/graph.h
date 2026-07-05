@@ -6,12 +6,19 @@
 
 struct Node
 {
-    Vector3 Position;
-    Vector3 Velocity;
-    Vector3 Force;
-    bool IsDirectory;
-    float Radius;
     char Name[256];
+    bool IsDirectory;
+    float Mass;
+    float Radius;
+    int Depth;
+    Vector3 Position;
+
+    size_t ParentIndex = (size_t)-1;
+    float OrbitRadius = 0.0f;
+    float OrbitAngle = 0.0f;
+    float OrbitSpeed = 0.0f;
+    float YOffset = 0.0f;
+    float OrbitTilt = 0.0f;
 };
 
 struct Edge

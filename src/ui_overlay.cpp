@@ -20,10 +20,12 @@ void DrawUI(EngineState &state)
 
     ImGui::Text("DeltaTime: %f", state.DeltaTime);
     ImGui::Text("GlobalTime: %f", state.GlobalTime);
+    ImGui::Text("Physics Calc Time: %.2f ms", state.PhysicsTimeMs);
 
     ImGui::SliderFloat("Simulation Speed", &state.SimulationSpeed, 0.0f, 10.0f);
+    ImGui::SliderFloat("Render Distance", &state.RenderDistance, 100.0f, 10000.0f);
 
-    if (ImGui::Button("Enable Zen Mode"))
+    if (ImGui::Button(state.IsZenModeEnabled ? "Disable Zen Mode" : "Enable Zen Mode"))
     {
         state.IsZenModeEnabled = true;
     }

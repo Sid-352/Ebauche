@@ -1,8 +1,8 @@
 #pragma once
 
 #include "engine.h"
-#include <vector>
 #include <raylib.h>
+#include <vector>
 
 struct Planet
 {
