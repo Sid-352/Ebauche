@@ -99,7 +99,35 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
     static float pitch = -0.463f;
     static float yaw = 3.14159f;
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+    {
+        Vector2 mouseDelta = GetMouseDelta();
+        float dYaw = -mouseDelta.x * 0.005f;
+        float dPitch = -mouseDelta.y * 0.005f;
+
+        yaw += dYaw;
+        pitch += dPitch;
+
+        if (pitch > 1.5f)
+            pitch = 1.5f;
+        if (pitch < -1.5f)
+            pitch = -1.5f;
+
+        Vector3 pos = context.Camera.position;
+
+        float cosY = cosf(dYaw);
+        float sinY = sinf(dYaw);
+        float nx = pos.x * cosY - pos.z * sinY;
+        float nz = pos.x * sinY + pos.z * cosY;
+        pos.x = nx;
+        pos.z = nz;
+
+        Vector3 rightAxis = {cosf(yaw), 0.0f, -sinf(yaw)};
+        pos = Vector3RotateByAxisAngle(pos, rightAxis, dPitch);
+
+        context.Camera.position = pos;
+    }
+    else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE))
     {
         Vector2 mouseDelta = GetMouseDelta();
         yaw -= mouseDelta.x * 0.005f;
@@ -131,9 +159,9 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(forward, moveSpeed));
     if (IsKeyDown(KEY_S))
         context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(forward, moveSpeed));
-    if (IsKeyDown(KEY_D))
-        context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(right, moveSpeed));
     if (IsKeyDown(KEY_A))
+        context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(right, moveSpeed));
+    if (IsKeyDown(KEY_D))
         context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(right, moveSpeed));
     if (IsKeyDown(KEY_SPACE))
         context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(up, moveSpeed));
