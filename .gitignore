@@ -16,6 +16,8 @@ Release/
 *.idb
 *.ilk
 *.exp
+*.bin
+*.json
 
 # Runtime/build artifacts
 *.exe

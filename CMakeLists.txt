@@ -29,6 +29,13 @@ FetchContent_Declare(
 )
 FetchContent_Populate(rlimgui)
 
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 add_library(imgui_lib STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
@@ -50,7 +57,8 @@ add_executable(${PROJECT_NAME}
     src/simulation.cpp
     src/renderer.cpp
     src/ui_overlay.cpp
+    src/manifest_loader.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib imgui_lib)
+target_link_libraries(${PROJECT_NAME} PRIVATE raylib imgui_lib nlohmann_json::nlohmann_json)
 target_include_directories(${PROJECT_NAME} PRIVATE src)

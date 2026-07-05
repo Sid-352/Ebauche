@@ -3,6 +3,7 @@
 #include "engine.h"
 #include "simulation.h"
 #include <raylib.h>
+#include <vector>
 
 struct RenderContext
 {
@@ -14,5 +15,5 @@ struct RenderContext
 };
 
 void InitializeRenderer(RenderContext &outContext);
-void DrawScene(RenderContext &context, const Planet &planet);
+void DrawScene(RenderContext &context, const std::vector<Planet> &planets);
 void ShutdownRenderer(RenderContext &context);

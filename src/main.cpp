@@ -1,4 +1,5 @@
 #include "engine.h"
+#include "manifest_loader.h"
 #include "math_core.h"
 #include "renderer.h"
 #include "simulation.h"
@@ -17,11 +18,10 @@ int main()
     engineState.IsZenModeEnabled = false;
     engineState.SimulationSpeed = 1.0f;
 
-    Planet testPlanet;
-    InitializeSimulation(testPlanet);
-
     RenderContext renderContext;
     InitializeRenderer(renderContext);
+
+    std::vector<Planet> planets = LoadPlanets("manifest");
 
     InitializeUI();
 
@@ -35,9 +35,9 @@ int main()
             engineState.IsZenModeEnabled = !engineState.IsZenModeEnabled;
         }
 
-        UpdateSimulation(testPlanet, engineState);
+        UpdateSimulation(planets, engineState);
 
-        DrawScene(renderContext, testPlanet);
+        DrawScene(renderContext, planets);
         DrawUI(engineState);
         EndDrawing();
     }
