@@ -1,0 +1,27 @@
+# Project docs archive
+doc/
+
+# Build output directories
+build/
+out/
+bin/
+x64/
+Debug/
+Release/
+
+# MSVC intermediate and debug artifacts
+*.obj
+*.pch
+*.pdb
+*.idb
+*.ilk
+*.exp
+
+# Runtime/build artifacts
+*.exe
+*.log
+
+# IDE/tooling
+.*/
+*.VC.db
+*.VC.opendb
