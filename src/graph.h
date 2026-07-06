@@ -12,6 +12,7 @@ struct Node
     float Radius;
     int Depth;
     Vector3 Position;
+    Vector3 Velocity = {0.0f, 0.0f, 0.0f};
 
     size_t ParentIndex = (size_t)-1;
     float OrbitRadius = 0.0f;

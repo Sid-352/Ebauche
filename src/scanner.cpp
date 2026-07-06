@@ -149,24 +149,24 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
         {
             size_t childIdx = children[c];
 
-            float theta = (float)GetRandomValue(0, 628318) / 100000.0f;
-            float rRandom = (float)GetRandomValue(0, 1000) / 1000.0f;
+            float theta = static_cast<float>(GetRandomValue(0, 628318)) / 100000.0f;
+            float rRandom = static_cast<float>(GetRandomValue(0, 1000)) / 1000.0f;
 
             if (outGraph.Nodes[childIdx].IsDirectory)
             {
-                float r = outGraph.Nodes[i].Radius + 10.0f + (rRandom * rRandom) * 3500.0f;
-                float thickness = 300.0f * (1.0f - rRandom);
-                float yOffset = ((float)GetRandomValue(-1000, 1000) / 1000.0f) * thickness;
-                float tilt = ((float)GetRandomValue(-500, 500) / 1000.0f);
+                float r = outGraph.Nodes[i].Radius + 10.0f + ((rRandom * rRandom) * 3500.0f);
+                const float thickness = 300.0f * (1.0f - rRandom);
+                float yOffset = (static_cast<float>(GetRandomValue(-1000, 1000)) / 1000.0f) * thickness;
+                float tilt = (static_cast<float>(GetRandomValue(-500, 500)) / 1000.0f);
 
                 outGraph.Nodes[childIdx].ParentIndex = i;
                 outGraph.Nodes[childIdx].OrbitRadius = r;
                 outGraph.Nodes[childIdx].OrbitAngle = theta;
-                outGraph.Nodes[childIdx].OrbitSpeed = ((float)GetRandomValue(1, 20) / 1000.0f);
+                outGraph.Nodes[childIdx].OrbitSpeed = (static_cast<float>(GetRandomValue(1, 20)) / 1000.0f);
                 outGraph.Nodes[childIdx].YOffset = yOffset;
                 outGraph.Nodes[childIdx].OrbitTilt = tilt;
-                outGraph.Nodes[childIdx].SpinAngle = ((float)GetRandomValue(0, 628) / 100.0f);
-                outGraph.Nodes[childIdx].SpinSpeed = ((float)GetRandomValue(-50, 50) / 1000.0f);
+                outGraph.Nodes[childIdx].SpinAngle = (static_cast<float>(GetRandomValue(0, 628)) / 100.0f);
+                outGraph.Nodes[childIdx].SpinSpeed = (static_cast<float>(GetRandomValue(-50, 50)) / 1000.0f);
 
                 outGraph.Nodes[childIdx].Position = {outGraph.Nodes[i].Position.x + cosf(theta) * r,
                                                      outGraph.Nodes[i].Position.y + yOffset,
@@ -174,19 +174,19 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
             }
             else
             {
-                float r = outGraph.Nodes[i].Radius + 1.0f + (rRandom * rRandom) * 150.0f;
-                float thickness = 20.0f * (1.0f - rRandom);
-                float yOffset = ((float)GetRandomValue(-1000, 1000) / 1000.0f) * thickness;
-                float tilt = ((float)GetRandomValue(-150, 150) / 1000.0f);
+                float r = outGraph.Nodes[i].Radius + 1.0f + ((rRandom * rRandom) * 150.0f);
+                const float thickness = 20.0f * (1.0f - rRandom);
+                float yOffset = (static_cast<float>(GetRandomValue(-1000, 1000)) / 1000.0f) * thickness;
+                float tilt = (static_cast<float>(GetRandomValue(-150, 150)) / 1000.0f);
 
                 outGraph.Nodes[childIdx].ParentIndex = i;
                 outGraph.Nodes[childIdx].OrbitRadius = r;
                 outGraph.Nodes[childIdx].OrbitAngle = theta;
-                outGraph.Nodes[childIdx].OrbitSpeed = ((float)GetRandomValue(10, 100) / 100.0f);
+                outGraph.Nodes[childIdx].OrbitSpeed = (static_cast<float>(GetRandomValue(10, 100)) / 100.0f);
                 outGraph.Nodes[childIdx].YOffset = yOffset;
                 outGraph.Nodes[childIdx].OrbitTilt = tilt;
-                outGraph.Nodes[childIdx].SpinAngle = ((float)GetRandomValue(0, 628) / 100.0f);
-                outGraph.Nodes[childIdx].SpinSpeed = ((float)GetRandomValue(-200, 200) / 1000.0f);
+                outGraph.Nodes[childIdx].SpinAngle = (static_cast<float>(GetRandomValue(0, 628)) / 100.0f);
+                outGraph.Nodes[childIdx].SpinSpeed = (static_cast<float>(GetRandomValue(-200, 200)) / 1000.0f);
 
                 outGraph.Nodes[childIdx].Position = {outGraph.Nodes[i].Position.x + cosf(theta) * r,
                                                      outGraph.Nodes[i].Position.y + yOffset,

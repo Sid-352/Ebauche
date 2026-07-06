@@ -40,27 +40,11 @@ void InitializeRenderer(RenderContext &outContext)
         outContext.DirModels[i] = LoadModelFromMesh(GenMeshSphere(1.0f, 16, 16));
         outContext.DirModels[i].materials[0].shader = instancingShader;
 
-        float t = i / 9.0f;
-        Color bucketColor;
+        Color starColors[10] = {{255, 40, 40, 255},   {255, 100, 50, 255},  {255, 150, 50, 255},  {255, 200, 80, 255},
+                                {255, 240, 100, 255}, {255, 250, 200, 255}, {255, 255, 255, 255}, {180, 220, 255, 255},
+                                {100, 200, 255, 255}, {50, 100, 255, 255}};
 
-        if (t < 0.5f)
-        {
-            float localT = t * 2.0f;
-            bucketColor.r = (unsigned char)(100 + localT * 155);
-            bucketColor.g = (unsigned char)(120 + localT * 30);
-            bucketColor.b = (unsigned char)(255 - localT * 205);
-            bucketColor.a = 255;
-        }
-        else
-        {
-            float localT = (t - 0.5f) * 2.0f;
-            bucketColor.r = 255;
-            bucketColor.g = (unsigned char)(150 + localT * 105);
-            bucketColor.b = (unsigned char)(50 + localT * 205);
-            bucketColor.a = 255;
-        }
-
-        outContext.DirModels[i].materials[0].maps[MATERIAL_MAP_ALBEDO].color = bucketColor;
+        outContext.DirModels[i].materials[0].maps[MATERIAL_MAP_ALBEDO].color = starColors[i];
     }
 
     if (backgroundStars.empty())
@@ -99,35 +83,19 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
     static float pitch = -0.463f;
     static float yaw = 3.14159f;
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+    Vector3 forward = {cosf(pitch) * sinf(yaw), sinf(pitch), cosf(pitch) * cosf(yaw)};
+    Vector3 right = {cosf(yaw), 0.0f, -sinf(yaw)};
+    Vector3 up = {0.0f, 1.0f, 0.0f};
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE))
     {
         Vector2 mouseDelta = GetMouseDelta();
-        float dYaw = -mouseDelta.x * 0.005f;
-        float dPitch = -mouseDelta.y * 0.005f;
-
-        yaw += dYaw;
-        pitch += dPitch;
-
-        if (pitch > 1.5f)
-            pitch = 1.5f;
-        if (pitch < -1.5f)
-            pitch = -1.5f;
-
-        Vector3 pos = context.Camera.position;
-
-        float cosY = cosf(dYaw);
-        float sinY = sinf(dYaw);
-        float nx = pos.x * cosY - pos.z * sinY;
-        float nz = pos.x * sinY + pos.z * cosY;
-        pos.x = nx;
-        pos.z = nz;
-
-        Vector3 rightAxis = {cosf(yaw), 0.0f, -sinf(yaw)};
-        pos = Vector3RotateByAxisAngle(pos, rightAxis, dPitch);
-
-        context.Camera.position = pos;
+        float panSpeed = context.CameraSpeed * 0.05f;
+        Vector3 trueUp = Vector3CrossProduct(forward, right);
+        context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(right, -mouseDelta.x * panSpeed));
+        context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(trueUp, mouseDelta.y * panSpeed));
     }
-    else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE))
+    else if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
     {
         Vector2 mouseDelta = GetMouseDelta();
         yaw -= mouseDelta.x * 0.005f;
@@ -138,10 +106,6 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         if (pitch < -1.5f)
             pitch = -1.5f;
     }
-
-    Vector3 forward = {cosf(pitch) * sinf(yaw), sinf(pitch), cosf(pitch) * cosf(yaw)};
-    Vector3 right = {cosf(yaw), 0.0f, -sinf(yaw)};
-    Vector3 up = {0.0f, 1.0f, 0.0f};
 
     context.CameraSpeed += GetMouseWheelMove() * (context.CameraSpeed * 0.2f);
     if (context.CameraSpeed < 1.0f)
@@ -182,6 +146,7 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
 
     BeginTextureMode(context.Target);
     ClearBackground(BLACK);
+    rlSetClipPlanes(1.0, state.RenderDistance + 100000.0);
     BeginMode3D(context.Camera);
 
     static std::vector<Matrix> dirTransforms[10];
@@ -196,60 +161,112 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
     Vector3 camPos = context.Camera.position;
     float maxDistSqr = state.RenderDistance * state.RenderDistance;
 
-    for (const auto &node : graph.Nodes)
+    for (size_t i = 0; i < graph.Nodes.size(); i++)
     {
+        const auto &node = graph.Nodes[i];
         Vector3 diff = {node.Position.x - camPos.x, node.Position.y - camPos.y, node.Position.z - camPos.z};
         float distSqr = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
 
         if (distSqr > maxDistSqr)
             continue;
 
-        float apparentSize = (node.Radius * node.Radius) / (distSqr + 1.0f);
-        if (apparentSize < 0.000000001f)
-            continue;
-
-        float intensity = log10f(node.Mass + 1.0f) / 9.0f;
-        if (intensity > 1.0f)
-            intensity = 1.0f;
+        float massLog = log10f(node.Mass + 1.0f);
+        float intensity = 0.0f;
+        if (massLog > 4.0f)
+        {
+            intensity = powf((massLog - 4.0f) / 5.0f, 0.85f);
+        }
         if (intensity < 0.0f)
             intensity = 0.0f;
 
         if (node.IsDirectory)
         {
-            float r = node.Radius * state.SphereSizeMultiplier;
-            Matrix transform = MatrixMultiply(MatrixScale(r, r, r),
-                                              MatrixTranslate(node.Position.x, node.Position.y, node.Position.z));
+            int bucketIndex = 0;
+            float r = 2.0f * state.SphereSizeMultiplier;
 
-            int bucketIndex = (int)(intensity * 9.99f);
-            dirTransforms[bucketIndex].push_back(transform);
-        }
-        else
-        {
-            Color ptColor;
-            float t = intensity;
-            if (t < 0.25f)
+            float safeIntensity = intensity;
+            if (safeIntensity > 1.0f)
+                safeIntensity = 1.0f;
+
+            bucketIndex = (int)(safeIntensity * 9.99f);
+            if (bucketIndex > 9)
+                bucketIndex = 9;
+
+            if (massLog <= 4.0f)
             {
-                float l = t * 4.0f;
-                ptColor = {0, (unsigned char)(l * 120), (unsigned char)(100 + l * 155), 200};
-            }
-            else if (t < 0.50f)
-            {
-                float l = (t - 0.25f) * 4.0f;
-                ptColor = {0, (unsigned char)(120 + l * 135), 255, 200};
-            }
-            else if (t < 0.75f)
-            {
-                float l = (t - 0.50f) * 4.0f;
-                ptColor = {(unsigned char)(l * 255), 255, (unsigned char)((1.0f - l) * 255), 200};
+                r = 3.0f * state.SphereSizeMultiplier;
+                bucketIndex = 0;
             }
             else
             {
-                float l = (t - 0.75f) * 4.0f;
-                ptColor = {255, (unsigned char)((1.0f - l) * 200 + 55), 0, 200};
+                float invIntensity = 1.0f - safeIntensity;
+                r = (3.0f + invIntensity * 5.0f) * state.SphereSizeMultiplier;
+
+                if (intensity > 1.1f)
+                {
+                    r *= 1.5f;
+                    bucketIndex = 6;
+                }
+            }
+            Matrix transform = MatrixMultiply(MatrixScale(r, r, r),
+                                              MatrixTranslate(node.Position.x, node.Position.y, node.Position.z));
+
+            if (i != state.SelectedNodeIndex)
+            {
+                dirTransforms[bucketIndex].push_back(transform);
+            }
+        }
+        else
+        {
+            float t = intensity;
+            float safeT = intensity;
+            if (safeT > 1.0f)
+                safeT = 1.0f;
+
+            float hue = 280.0f - (safeT * 260.0f);
+            if (hue < 0.0f)
+                hue += 360.0f;
+
+            float saturation = 0.6f + (safeT * 0.4f);
+            Color ptColor = ColorFromHSV(hue, saturation, 1.0f);
+
+            float size = 0.8f + (safeT * 3.5f * state.FileSizeMultiplier);
+
+            if (massLog >= 10.0f)
+            {
+                ptColor = {255, 255, 100, 255};
+                size *= 2.5f;
             }
 
-            float size = 0.3f + (intensity * state.FileSizeMultiplier);
+            if (i == state.SelectedNodeIndex)
+            {
+                size *= 2.0f;
+            }
+
             filePoints.push_back({node.Position, ptColor, size, node.SpinAngle});
+        }
+    }
+
+    if (state.SelectedNodeIndex != (size_t)-1 && state.SelectedNodeIndex < graph.Nodes.size())
+    {
+        const auto &node = graph.Nodes[state.SelectedNodeIndex];
+        if (node.IsDirectory)
+        {
+            float massLog = log10f(node.Mass + 1.0f);
+            float r = 3.0f * state.SphereSizeMultiplier;
+            if (massLog > 4.0f)
+            {
+                float intensity = powf((massLog - 4.0f) / 5.0f, 0.85f);
+                if (intensity > 1.0f)
+                    intensity = 1.0f;
+                if (intensity < 0.0f)
+                    intensity = 0.0f;
+                float invIntensity = 1.0f - intensity;
+                r = (3.0f + invIntensity * 5.0f) * state.SphereSizeMultiplier;
+            }
+            if (i == state.SelectedNodeIndex)
+                r *= 1.5f;
+            DrawSphere(node.Position, r, ptColor);
         }
     }
 
@@ -403,6 +420,32 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         {
             DrawCircleLines((int)centerScreen.x, (int)centerScreen.y, 10.0f, {255, 200, 0, 100});
             DrawText("Galactic Center", (int)centerScreen.x + 15, (int)centerScreen.y - 5, 10, {255, 200, 0, 100});
+        }
+    }
+
+    if (state.SelectedNodeIndex != (size_t)-1 && state.SelectedNodeIndex < graph.Nodes.size())
+    {
+        const auto& selectedNode = graph.Nodes[state.SelectedNodeIndex];
+        Vector2 selScreen = GetWorldToScreenEx(selectedNode.Position, context.Camera, GetScreenWidth(), GetScreenHeight());
+        
+        Vector3 dirToSel = Vector3Normalize(Vector3Subtract(selectedNode.Position, context.Camera.position));
+        Vector3 camForward = Vector3Normalize(Vector3Subtract(context.Camera.target, context.Camera.position));
+        bool isBehindSel = Vector3DotProduct(dirToSel, camForward) < 0.0f;
+
+        if (!isBehindSel)
+        {
+            float retSize = 15.0f;
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y - retSize, WHITE);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize, (int)selScreen.y - retSize + 8, WHITE);
+            
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y - retSize, WHITE);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize, (int)selScreen.y - retSize + 8, WHITE);
+
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y + retSize, WHITE);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize, (int)selScreen.y + retSize - 8, WHITE);
+
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y + retSize, WHITE);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize, (int)selScreen.y + retSize - 8, WHITE);
         }
     }
 }

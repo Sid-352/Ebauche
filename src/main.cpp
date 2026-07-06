@@ -54,6 +54,25 @@ int main()
         UpdatePhysics(graph, engineState.DeltaTime * engineState.SimulationSpeed);
         engineState.PhysicsTimeMs = (GetTime() - startTime) * 1000.0;
 
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            Ray ray = GetMouseRay(GetMousePosition(), renderContext.Camera);
+            float closestHit = 999999999.0f;
+            engineState.SelectedNodeIndex = (size_t)-1;
+
+            for (size_t i = 0; i < graph.Nodes.size(); i++)
+            {
+                const auto &node = graph.Nodes[i];
+                float r = 2.0f;
+                RayCollision collision = GetRayCollisionSphere(ray, node.Position, r);
+                if (collision.hit && collision.distance < closestHit)
+                {
+                    closestHit = collision.distance;
+                    engineState.SelectedNodeIndex = i;
+                }
+            }
+        }
+
         UpdateGraphAnimation(graph, engineState.DeltaTime * engineState.SimulationSpeed);
         DrawScene(renderContext, engineState, graph);
         DrawUI(engineState);

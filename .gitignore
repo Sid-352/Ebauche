@@ -22,6 +22,7 @@ Release/
 # Runtime/build artifacts
 *.exe
 *.log
+*.ini 
 
 # IDE/tooling
 .*/

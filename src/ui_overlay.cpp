@@ -23,7 +23,8 @@ void DrawUI(EngineState &state)
     ImGui::Text("Physics Calc Time: %.2f ms", state.PhysicsTimeMs);
 
     ImGui::SliderFloat("Simulation Speed", &state.SimulationSpeed, 0.0f, 10.0f);
-    ImGui::SliderFloat("Render Distance", &state.RenderDistance, 100.0f, 10000.0f);
+    ImGui::SliderFloat("Render Distance", &state.RenderDistance, 100.0f, 10000000.0f, "%.3f",
+                       ImGuiSliderFlags_Logarithmic);
     ImGui::Checkbox("Show Galactic Center", &state.ShowGalacticCenter);
 
     if (ImGui::Button(state.IsZenModeEnabled ? "Disable Zen Mode" : "Enable Zen Mode"))
