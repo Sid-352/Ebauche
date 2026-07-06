@@ -4,6 +4,24 @@
 #include <raymath.h>
 #include <rlgl.h>
 #include <vector>
+#include <string>
+#include <sstream>
+#include <iomanip>
+
+static std::string FormatBytes(float bytes)
+{
+    const char* suffixes[] = {"B", "KB", "MB", "GB", "TB"};
+    int suffixIndex = 0;
+    float count = bytes;
+    while (count >= 1024.0f && suffixIndex < 4)
+    {
+        count /= 1024.0f;
+        suffixIndex++;
+    }
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2) << count << " " << suffixes[suffixIndex];
+    return ss.str();
+}
 
 struct ColoredPoint
 {
@@ -417,26 +435,47 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         {
             Vector2 selScreen =
                 GetWorldToScreenEx(selectedNode.Position, context.Camera, GetScreenWidth(), GetScreenHeight());
+                
             float retSize = 15.0f;
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize + 8,
-                     (int)selScreen.y - retSize, hudColor);
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize,
-                     (int)selScreen.y - retSize + 8, hudColor);
-
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize - 8,
-                     (int)selScreen.y - retSize, hudColor);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize,
-                     (int)selScreen.y - retSize + 8, hudColor);
-
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize + 8,
-                     (int)selScreen.y + retSize, hudColor);
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize,
-                     (int)selScreen.y + retSize - 8, hudColor);
-
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize - 8,
-                     (int)selScreen.y + retSize, hudColor);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize,
-                     (int)selScreen.y + retSize - 8, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y - retSize, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize, (int)selScreen.y - retSize + 8, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y - retSize, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize, (int)selScreen.y - retSize + 8, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y + retSize, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize, (int)selScreen.y + retSize - 8, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y + retSize, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize, (int)selScreen.y + retSize - 8, hudColor);
+                
+            if (state.ShowSelectionPopup)
+            {
+                // Draw holographic UI
+                Vector2 panelPos = {selScreen.x + 40.0f, selScreen.y - 40.0f};
+                DrawLineEx(selScreen, panelPos, 2.0f, hudColor);
+                DrawCircleV(selScreen, 3.0f, hudColor);
+                
+                int nameWidth = MeasureText(selectedNode.Name, 20);
+                int pathWidth = MeasureText(selectedNode.Path, 10);
+                float panelWidth = fmaxf(450.0f, fmaxf((float)nameWidth + 30.0f, (float)pathWidth + 30.0f));
+                float panelHeight = 85.0f;
+                
+                DrawRectangle((int)panelPos.x, (int)panelPos.y, (int)panelWidth, (int)panelHeight, {10, 15, 25, 200});
+                DrawRectangle((int)panelPos.x, (int)panelPos.y, 4, (int)panelHeight, hudColor);
+                DrawRectangleLines((int)panelPos.x, (int)panelPos.y, (int)panelWidth, (int)panelHeight, hudColorFaded);
+                
+                int textX = (int)panelPos.x + 15;
+                int textY = (int)panelPos.y + 10;
+                
+                DrawText(selectedNode.Name, textX, textY, 20, WHITE);
+                
+                std::string sizeStr = FormatBytes(selectedNode.Mass);
+                if (selectedNode.IsDirectory)
+                    sizeStr = "Directory | " + sizeStr;
+                else
+                    sizeStr = "File | " + sizeStr;
+                    
+                DrawText(sizeStr.c_str(), textX, textY + 25, 10, {200, 220, 255, 255});
+                DrawText(selectedNode.Path, textX, textY + 45, 10, GRAY);
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
     if (rootNameStr.empty())
         rootNameStr = canonicalRoot;
     strncpy_s(rootNode.Name, sizeof(rootNode.Name), rootNameStr.c_str(), _TRUNCATE);
+    strncpy_s(rootNode.Path, sizeof(rootNode.Path), canonicalRoot.c_str(), _TRUNCATE);
 
     outGraph.Nodes.push_back(rootNode);
     pathToIndex[canonicalRoot] = 0;
@@ -79,6 +80,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 childNode.Mass = mass;
                 std::string childNameStr = entry.path().filename().string();
                 strncpy_s(childNode.Name, sizeof(childNode.Name), childNameStr.c_str(), _TRUNCATE);
+                strncpy_s(childNode.Path, sizeof(childNode.Path), currentPath.c_str(), _TRUNCATE);
 
                 outGraph.Nodes.push_back(childNode);
                 pathToIndex[currentPath] = currentIndex;

@@ -30,6 +30,7 @@ void DrawUI(EngineState &state)
     ImGui::SliderFloat("Render Distance", &state.RenderDistance, 100.0f, 10000000.0f, "%.3f",
                        ImGuiSliderFlags_Logarithmic);
     ImGui::Checkbox("Show Galactic Center", &state.ShowGalacticCenter);
+    ImGui::Checkbox("Show Selection Popup", &state.ShowSelectionPopup);
 
     if (ImGui::Button(state.IsZenModeEnabled ? "Disable Zen Mode" : "Enable Zen Mode"))
     {

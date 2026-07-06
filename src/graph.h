@@ -7,6 +7,7 @@
 struct Node
 {
     char Name[256];
+    char Path[512];
     bool IsDirectory;
     float Mass;
     float Radius;
