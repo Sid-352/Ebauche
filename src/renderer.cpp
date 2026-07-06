@@ -446,11 +446,21 @@ void UpdateGraphAnimation(Graph &graph, float dt)
 
         node.OrbitAngle += node.OrbitSpeed * dt;
         node.SpinAngle += node.SpinSpeed * dt;
+        node.RadiusJitterPhase += node.RadiusJitterSpeed * dt;
+
+        float currentRadius = node.OrbitRadius + sinf(node.RadiusJitterPhase) * node.RadiusJitterAmp;
+
+        float localX = cosf(node.OrbitAngle) * currentRadius;
+        float localZ = sinf(node.OrbitAngle) * currentRadius * (1.0f - node.Eccentricity);
+
+        float rot = node.OrbitRotation;
+        float worldX = localX * cosf(rot) - localZ * sinf(rot);
+        float worldZ = localX * sinf(rot) + localZ * cosf(rot);
 
         Vector3 parentPos = graph.Nodes[node.ParentIndex].Position;
-        node.Position.x = parentPos.x + cosf(node.OrbitAngle) * node.OrbitRadius;
-        node.Position.y = parentPos.y + node.YOffset + sinf(node.OrbitAngle) * node.OrbitTilt * node.OrbitRadius;
-        node.Position.z = parentPos.z + sinf(node.OrbitAngle) * node.OrbitRadius;
+        node.Position.x = parentPos.x + worldX;
+        node.Position.y = parentPos.y + node.YOffset + sinf(node.OrbitAngle) * node.OrbitTilt * currentRadius;
+        node.Position.z = parentPos.z + worldZ;
     }
 }
 

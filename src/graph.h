@@ -22,6 +22,12 @@ struct Node
     float OrbitTilt = 0.0f;
     float SpinAngle = 0.0f;
     float SpinSpeed = 0.0f;
+
+    float OrbitRotation = 0.0f;
+    float Eccentricity = 0.0f;
+    float RadiusJitterPhase = 0.0f;
+    float RadiusJitterSpeed = 0.0f;
+    float RadiusJitterAmp = 0.0f;
 };
 
 struct Edge

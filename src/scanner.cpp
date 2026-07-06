@@ -162,15 +162,26 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 outGraph.Nodes[childIdx].ParentIndex = i;
                 outGraph.Nodes[childIdx].OrbitRadius = r;
                 outGraph.Nodes[childIdx].OrbitAngle = theta;
-                outGraph.Nodes[childIdx].OrbitSpeed = (static_cast<float>(GetRandomValue(1, 20)) / 1000.0f);
+
+                float keplerSpeed = 10.0f / sqrtf(r + 1.0f);
+                outGraph.Nodes[childIdx].OrbitSpeed =
+                    keplerSpeed * (static_cast<float>(GetRandomValue(50, 150)) / 1000.0f);
+
                 outGraph.Nodes[childIdx].YOffset = yOffset;
                 outGraph.Nodes[childIdx].OrbitTilt = tilt;
                 outGraph.Nodes[childIdx].SpinAngle = (static_cast<float>(GetRandomValue(0, 628)) / 100.0f);
                 outGraph.Nodes[childIdx].SpinSpeed = (static_cast<float>(GetRandomValue(-50, 50)) / 1000.0f);
 
-                outGraph.Nodes[childIdx].Position = {outGraph.Nodes[i].Position.x + cosf(theta) * r,
-                                                     outGraph.Nodes[i].Position.y + yOffset,
-                                                     outGraph.Nodes[i].Position.z + sinf(theta) * r};
+                outGraph.Nodes[childIdx].OrbitRotation = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
+                outGraph.Nodes[childIdx].Eccentricity = static_cast<float>(GetRandomValue(30, 80)) / 100.0f;
+                outGraph.Nodes[childIdx].RadiusJitterPhase = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
+                outGraph.Nodes[childIdx].RadiusJitterSpeed =
+                    outGraph.Nodes[childIdx].OrbitSpeed * (static_cast<float>(GetRandomValue(90, 110)) / 100.0f);
+                outGraph.Nodes[childIdx].RadiusJitterAmp = r * (static_cast<float>(GetRandomValue(5, 15)) / 100.0f);
+
+                outGraph.Nodes[childIdx].Position = {
+                    outGraph.Nodes[i].Position.x + cosf(theta) * r, outGraph.Nodes[i].Position.y + yOffset,
+                    outGraph.Nodes[i].Position.z + sinf(theta) * r * (1.0f - outGraph.Nodes[childIdx].Eccentricity)};
             }
             else
             {
@@ -182,15 +193,26 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 outGraph.Nodes[childIdx].ParentIndex = i;
                 outGraph.Nodes[childIdx].OrbitRadius = r;
                 outGraph.Nodes[childIdx].OrbitAngle = theta;
-                outGraph.Nodes[childIdx].OrbitSpeed = (static_cast<float>(GetRandomValue(10, 100)) / 100.0f);
+
+                float keplerSpeed = 30.0f / sqrtf(r + 1.0f);
+                outGraph.Nodes[childIdx].OrbitSpeed =
+                    keplerSpeed * (static_cast<float>(GetRandomValue(50, 150)) / 100.0f);
+
                 outGraph.Nodes[childIdx].YOffset = yOffset;
                 outGraph.Nodes[childIdx].OrbitTilt = tilt;
                 outGraph.Nodes[childIdx].SpinAngle = (static_cast<float>(GetRandomValue(0, 628)) / 100.0f);
                 outGraph.Nodes[childIdx].SpinSpeed = (static_cast<float>(GetRandomValue(-200, 200)) / 1000.0f);
 
-                outGraph.Nodes[childIdx].Position = {outGraph.Nodes[i].Position.x + cosf(theta) * r,
-                                                     outGraph.Nodes[i].Position.y + yOffset,
-                                                     outGraph.Nodes[i].Position.z + sinf(theta) * r};
+                outGraph.Nodes[childIdx].OrbitRotation = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
+                outGraph.Nodes[childIdx].Eccentricity = static_cast<float>(GetRandomValue(50, 80)) / 100.0f;
+                outGraph.Nodes[childIdx].RadiusJitterPhase = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
+                outGraph.Nodes[childIdx].RadiusJitterSpeed =
+                    outGraph.Nodes[childIdx].OrbitSpeed * (static_cast<float>(GetRandomValue(80, 120)) / 100.0f);
+                outGraph.Nodes[childIdx].RadiusJitterAmp = r * (static_cast<float>(GetRandomValue(2, 10)) / 100.0f);
+
+                outGraph.Nodes[childIdx].Position = {
+                    outGraph.Nodes[i].Position.x + cosf(theta) * r, outGraph.Nodes[i].Position.y + yOffset,
+                    outGraph.Nodes[i].Position.z + sinf(theta) * r * (1.0f - outGraph.Nodes[childIdx].Eccentricity)};
             }
         }
     }
