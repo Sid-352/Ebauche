@@ -1,16 +1,16 @@
 #include "renderer.h"
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <raymath.h>
 #include <rlgl.h>
-#include <vector>
-#include <string>
 #include <sstream>
-#include <iomanip>
+#include <string>
+#include <vector>
 
 static std::string FormatBytes(float bytes)
 {
-    const char* suffixes[] = {"B", "KB", "MB", "GB", "TB"};
+    const char *suffixes[] = {"B", "KB", "MB", "GB", "TB"};
     int suffixIndex = 0;
     float count = bytes;
     while (count >= 1024.0f && suffixIndex < 4)
@@ -96,7 +96,7 @@ void UpdateCameraFreecam(Camera3D *camera, float dt)
         speed *= 5.0f;
 }
 
-void DrawScene(RenderContext &context, const EngineState &state, const Graph &graph)
+void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 {
     static float pitch = -0.463f;
     static float yaw = 3.14159f;
@@ -354,6 +354,11 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
 
     EndMode3D();
     EndTextureMode();
+    
+    size_t totalVisible = filePoints.size();
+    for (int i = 0; i < 10; i++)
+        totalVisible += dirTransforms[i].size();
+    state.VisibleObjects = totalVisible;
 
     BeginDrawing();
     ClearBackground(BLACK);
@@ -361,7 +366,7 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
     float resolution[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
     SetShaderValue(context.PostProcessingShader, GetShaderLocation(context.PostProcessingShader, "resolution"),
                    resolution, SHADER_UNIFORM_VEC2);
-    
+
     float bInt = state.BloomIntensity;
     SetShaderValue(context.PostProcessingShader, GetShaderLocation(context.PostProcessingShader, "bloomIntensity"),
                    &bInt, SHADER_UNIFORM_FLOAT);
@@ -435,44 +440,51 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
         {
             Vector2 selScreen =
                 GetWorldToScreenEx(selectedNode.Position, context.Camera, GetScreenWidth(), GetScreenHeight());
-                
+
             float retSize = 15.0f;
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y - retSize, hudColor);
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize, (int)selScreen.y - retSize + 8, hudColor);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y - retSize, hudColor);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize, (int)selScreen.y - retSize + 8, hudColor);
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y + retSize, hudColor);
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize, (int)selScreen.y + retSize - 8, hudColor);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y + retSize, hudColor);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize, (int)selScreen.y + retSize - 8, hudColor);
-                
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize + 8,
+                     (int)selScreen.y - retSize, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize,
+                     (int)selScreen.y - retSize + 8, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize - 8,
+                     (int)selScreen.y - retSize, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize,
+                     (int)selScreen.y - retSize + 8, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize + 8,
+                     (int)selScreen.y + retSize, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize,
+                     (int)selScreen.y + retSize - 8, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize - 8,
+                     (int)selScreen.y + retSize, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize,
+                     (int)selScreen.y + retSize - 8, hudColor);
+
             if (state.ShowSelectionPopup)
             {
-                // Draw holographic UI
                 Vector2 panelPos = {selScreen.x + 40.0f, selScreen.y - 40.0f};
                 DrawLineEx(selScreen, panelPos, 2.0f, hudColor);
                 DrawCircleV(selScreen, 3.0f, hudColor);
-                
+
                 int nameWidth = MeasureText(selectedNode.Name, 20);
                 int pathWidth = MeasureText(selectedNode.Path, 10);
                 float panelWidth = fmaxf(450.0f, fmaxf((float)nameWidth + 30.0f, (float)pathWidth + 30.0f));
                 float panelHeight = 85.0f;
-                
+
                 DrawRectangle((int)panelPos.x, (int)panelPos.y, (int)panelWidth, (int)panelHeight, {10, 15, 25, 200});
                 DrawRectangle((int)panelPos.x, (int)panelPos.y, 4, (int)panelHeight, hudColor);
                 DrawRectangleLines((int)panelPos.x, (int)panelPos.y, (int)panelWidth, (int)panelHeight, hudColorFaded);
-                
+
                 int textX = (int)panelPos.x + 15;
                 int textY = (int)panelPos.y + 10;
-                
+
                 DrawText(selectedNode.Name, textX, textY, 20, WHITE);
-                
+
                 std::string sizeStr = FormatBytes(selectedNode.Mass);
                 if (selectedNode.IsDirectory)
                     sizeStr = "Directory | " + sizeStr;
                 else
                     sizeStr = "File | " + sizeStr;
-                    
+
                 DrawText(sizeStr.c_str(), textX, textY + 25, 10, {200, 220, 255, 255});
                 DrawText(selectedNode.Path, textX, textY + 45, 10, GRAY);
             }

@@ -14,6 +14,6 @@ struct RenderContext
 };
 
 void InitializeRenderer(RenderContext &outContext);
-void DrawScene(RenderContext &context, const EngineState &state, const Graph &graph);
+void DrawScene(RenderContext &context, EngineState &state, const Graph &graph);
 void UpdateGraphAnimation(Graph &graph, float dt);
 void ShutdownRenderer(RenderContext &context);
