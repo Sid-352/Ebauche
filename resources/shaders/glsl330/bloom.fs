@@ -5,6 +5,7 @@ in vec4 fragColor;
 
 uniform sampler2D texture0;
 uniform vec2 resolution;
+uniform float bloomIntensity;
 
 out vec4 finalColor;
 
@@ -34,7 +35,7 @@ void main()
     baseCol.g = texture(texture0, fragTexCoord).g;
     baseCol.b = texture(texture0, fragTexCoord - centerDist * caOffset).b;
     
-    vec3 finalGlow = baseCol + (result * 1.0); 
+    vec3 finalGlow = baseCol + (result * bloomIntensity); 
     
     float vignette = 1.0 - smoothstep(0.4, 1.2, length(centerDist));
     finalGlow *= vignette;

@@ -343,6 +343,10 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
     float resolution[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
     SetShaderValue(context.PostProcessingShader, GetShaderLocation(context.PostProcessingShader, "resolution"),
                    resolution, SHADER_UNIFORM_VEC2);
+    
+    float bInt = state.BloomIntensity;
+    SetShaderValue(context.PostProcessingShader, GetShaderLocation(context.PostProcessingShader, "bloomIntensity"),
+                   &bInt, SHADER_UNIFORM_FLOAT);
 
     BeginShaderMode(context.PostProcessingShader);
     DrawTextureRec(context.Target.texture,

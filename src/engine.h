@@ -11,5 +11,6 @@ struct EngineState
     float RenderDistance = 100000.0f;
     double PhysicsTimeMs;
     bool ShowGalacticCenter = true;
+    float BloomIntensity = 1.0f;
     size_t SelectedNodeIndex = (size_t)-1;
 };
