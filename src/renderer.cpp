@@ -208,13 +208,13 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
                     bucketIndex = 6;
                 }
             }
+            if (i == state.SelectedNodeIndex)
+                r *= 1.5f;
+
             Matrix transform = MatrixMultiply(MatrixScale(r, r, r),
                                               MatrixTranslate(node.Position.x, node.Position.y, node.Position.z));
 
-            if (i != state.SelectedNodeIndex)
-            {
-                dirTransforms[bucketIndex].push_back(transform);
-            }
+            dirTransforms[bucketIndex].push_back(transform);
         }
         else
         {
@@ -244,29 +244,6 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
             }
 
             filePoints.push_back({node.Position, ptColor, size, node.SpinAngle});
-        }
-    }
-
-    if (state.SelectedNodeIndex != (size_t)-1 && state.SelectedNodeIndex < graph.Nodes.size())
-    {
-        const auto &node = graph.Nodes[state.SelectedNodeIndex];
-        if (node.IsDirectory)
-        {
-            float massLog = log10f(node.Mass + 1.0f);
-            float r = 3.0f * state.SphereSizeMultiplier;
-            if (massLog > 4.0f)
-            {
-                float intensity = powf((massLog - 4.0f) / 5.0f, 0.85f);
-                if (intensity > 1.0f)
-                    intensity = 1.0f;
-                if (intensity < 0.0f)
-                    intensity = 0.0f;
-                float invIntensity = 1.0f - intensity;
-                r = (3.0f + invIntensity * 5.0f) * state.SphereSizeMultiplier;
-            }
-            if (i == state.SelectedNodeIndex)
-                r *= 1.5f;
-            DrawSphere(node.Position, r, ptColor);
         }
     }
 
@@ -373,79 +350,89 @@ void DrawScene(RenderContext &context, const EngineState &state, const Graph &gr
                    {0.0f, 0.0f}, WHITE);
     EndShaderMode();
 
-    if (state.ShowGalacticCenter && !state.IsZenModeEnabled)
+    auto DrawOffscreenTracker = [&](Vector3 targetPos, const char *label, Color colorPrimary, Color colorSecondary)
     {
-        Vector2 centerScreen = GetWorldToScreen(Vector3{0, 0, 0}, context.Camera);
         float screenW = (float)GetScreenWidth();
         float screenH = (float)GetScreenHeight();
+        Vector2 screenPos = GetWorldToScreen(targetPos, context.Camera);
 
-        Vector3 dirToCenter = Vector3Normalize(Vector3Subtract(Vector3{0, 0, 0}, context.Camera.position));
+        Vector3 dirToTarget = Vector3Normalize(Vector3Subtract(targetPos, context.Camera.position));
         Vector3 camForward = Vector3Normalize(Vector3Subtract(context.Camera.target, context.Camera.position));
-        bool isBehind = Vector3DotProduct(dirToCenter, camForward) < 0.0f;
+        bool isBehind = Vector3DotProduct(dirToTarget, camForward) < 0.0f;
 
         if (isBehind)
         {
-            centerScreen.x = screenW - centerScreen.x;
-            centerScreen.y = screenH - centerScreen.y;
+            screenPos.x = screenW - screenPos.x;
+            screenPos.y = screenH - screenPos.y;
         }
 
         float pad = 40.0f;
-        bool isOffscreen = centerScreen.x < pad || centerScreen.x > screenW - pad || centerScreen.y < pad ||
-                           centerScreen.y > screenH - pad || isBehind;
+        bool isOffscreen = screenPos.x < pad || screenPos.x > screenW - pad || screenPos.y < pad ||
+                           screenPos.y > screenH - pad || isBehind;
 
         if (isOffscreen)
         {
-            Vector2 clampedPos = centerScreen;
+            Vector2 clampedPos = screenPos;
             clampedPos.x = fmaxf(pad, fminf(screenW - pad, clampedPos.x));
             clampedPos.y = fmaxf(pad, fminf(screenH - pad, clampedPos.y));
 
-            Vector2 dir = Vector2Normalize(Vector2Subtract(centerScreen, clampedPos));
-            if (isBehind && centerScreen.x > pad && centerScreen.x < screenW - pad && centerScreen.y > pad &&
-                centerScreen.y < screenH - pad)
+            Vector2 dir = Vector2Normalize(Vector2Subtract(screenPos, clampedPos));
+            if (isBehind && screenPos.x > pad && screenPos.x < screenW - pad && screenPos.y > pad &&
+                screenPos.y < screenH - pad)
             {
                 clampedPos.y = screenH - pad;
                 dir = {0.0f, 1.0f};
             }
 
-            Vector2 p1 = Vector2Add(clampedPos, Vector2Scale(dir, 15.0f));
-            Vector2 p2 =
-                Vector2Add(clampedPos, Vector2Add(Vector2Scale(dir, -10.0f), Vector2Scale({-dir.y, dir.x}, 10.0f)));
-            Vector2 p3 =
-                Vector2Add(clampedPos, Vector2Add(Vector2Scale(dir, -10.0f), Vector2Scale({dir.y, -dir.x}, 10.0f)));
-
-            DrawTriangle(p1, p2, p3, {255, 200, 0, 200});
-            DrawText("Galactic Center", (int)clampedPos.x - 40, (int)clampedPos.y - 30, 10, {255, 200, 0, 200});
+            if (label)
+                DrawText(label, (int)clampedPos.x - 40, (int)clampedPos.y - 10, 10, colorPrimary);
+            return false;
         }
-        else
+        return true;
+    };
+
+    Color hudColor = {255, 200, 0, 200};
+    Color hudColorFaded = {255, 200, 0, 100};
+
+    if (state.ShowGalacticCenter && !state.IsZenModeEnabled)
+    {
+        if (DrawOffscreenTracker({0.0f, 0.0f, 0.0f}, "Galactic Center", hudColor, hudColorFaded))
         {
-            DrawCircleLines((int)centerScreen.x, (int)centerScreen.y, 10.0f, {255, 200, 0, 100});
-            DrawText("Galactic Center", (int)centerScreen.x + 15, (int)centerScreen.y - 5, 10, {255, 200, 0, 100});
+            Vector2 centerScreen =
+                GetWorldToScreenEx({0.0f, 0.0f, 0.0f}, context.Camera, GetScreenWidth(), GetScreenHeight());
+            DrawCircleLines((int)centerScreen.x, (int)centerScreen.y, 10.0f, hudColor);
+            DrawText("Galactic Center", (int)centerScreen.x + 15, (int)centerScreen.y - 5, 10, hudColor);
         }
     }
 
     if (state.SelectedNodeIndex != (size_t)-1 && state.SelectedNodeIndex < graph.Nodes.size())
     {
-        const auto& selectedNode = graph.Nodes[state.SelectedNodeIndex];
-        Vector2 selScreen = GetWorldToScreenEx(selectedNode.Position, context.Camera, GetScreenWidth(), GetScreenHeight());
-        
-        Vector3 dirToSel = Vector3Normalize(Vector3Subtract(selectedNode.Position, context.Camera.position));
-        Vector3 camForward = Vector3Normalize(Vector3Subtract(context.Camera.target, context.Camera.position));
-        bool isBehindSel = Vector3DotProduct(dirToSel, camForward) < 0.0f;
+        const auto &selectedNode = graph.Nodes[state.SelectedNodeIndex];
 
-        if (!isBehindSel)
+        if (DrawOffscreenTracker(selectedNode.Position, "Selected", hudColor, hudColorFaded))
         {
+            Vector2 selScreen =
+                GetWorldToScreenEx(selectedNode.Position, context.Camera, GetScreenWidth(), GetScreenHeight());
             float retSize = 15.0f;
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y - retSize, WHITE);
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize, (int)selScreen.y - retSize + 8, WHITE);
-            
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y - retSize, WHITE);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize, (int)selScreen.y - retSize + 8, WHITE);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize + 8,
+                     (int)selScreen.y - retSize, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y - retSize, (int)selScreen.x - retSize,
+                     (int)selScreen.y - retSize + 8, hudColor);
 
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize + 8, (int)selScreen.y + retSize, WHITE);
-            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize, (int)selScreen.y + retSize - 8, WHITE);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize - 8,
+                     (int)selScreen.y - retSize, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y - retSize, (int)selScreen.x + retSize,
+                     (int)selScreen.y - retSize + 8, hudColor);
 
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize - 8, (int)selScreen.y + retSize, WHITE);
-            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize, (int)selScreen.y + retSize - 8, WHITE);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize + 8,
+                     (int)selScreen.y + retSize, hudColor);
+            DrawLine((int)selScreen.x - retSize, (int)selScreen.y + retSize, (int)selScreen.x - retSize,
+                     (int)selScreen.y + retSize - 8, hudColor);
+
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize - 8,
+                     (int)selScreen.y + retSize, hudColor);
+            DrawLine((int)selScreen.x + retSize, (int)selScreen.y + retSize, (int)selScreen.x + retSize,
+                     (int)selScreen.y + retSize - 8, hudColor);
         }
     }
 }

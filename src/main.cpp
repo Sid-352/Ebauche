@@ -58,7 +58,7 @@ int main()
         {
             Ray ray = GetMouseRay(GetMousePosition(), renderContext.Camera);
             float closestHit = 999999999.0f;
-            engineState.SelectedNodeIndex = (size_t)-1;
+            size_t newSelection = (size_t)-1;
 
             for (size_t i = 0; i < graph.Nodes.size(); i++)
             {
@@ -68,9 +68,14 @@ int main()
                 if (collision.hit && collision.distance < closestHit)
                 {
                     closestHit = collision.distance;
-                    engineState.SelectedNodeIndex = i;
+                    newSelection = i;
                 }
             }
+
+            if (newSelection != (size_t)-1 && newSelection == engineState.SelectedNodeIndex)
+                engineState.SelectedNodeIndex = (size_t)-1;
+            else if (newSelection != (size_t)-1)
+                engineState.SelectedNodeIndex = newSelection;
         }
 
         UpdateGraphAnimation(graph, engineState.DeltaTime * engineState.SimulationSpeed);
