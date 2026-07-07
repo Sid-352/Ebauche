@@ -13,6 +13,29 @@
 #include <raymath.h>
 #include <string>
 
+static bool icontains(const char *text, const std::string &query)
+{
+    if (query.empty())
+        return true;
+    const char *t = text;
+    while (*t)
+    {
+        bool match = true;
+        for (size_t i = 0; i < query.size(); i++)
+        {
+            if (t[i] == '\0' || std::tolower((unsigned char)t[i]) != query[i])
+            {
+                match = false;
+                break;
+            }
+        }
+        if (match)
+            return true;
+        t++;
+    }
+    return false;
+}
+
 int main()
 {
     InitWindow(1280, 720, "Ebauche");
@@ -23,7 +46,6 @@ int main()
     engineState.GlobalTime = 0.0f;
     engineState.IsZenModeEnabled = false;
     engineState.SimulationSpeed = 0.5f;
-    engineState.RenderDistance = 4000.0f;
     engineState.PhysicsTimeMs = 0.0;
 
     RenderContext renderContext;
@@ -96,10 +118,9 @@ int main()
 
         if (engineState.SearchTriggered && strlen(engineState.SearchQuery) > 0)
         {
-            static size_t searchOffset = 0;
             if (engineState.SearchReset)
             {
-                searchOffset = 0;
+                engineState.SearchOffset = 0;
                 engineState.SearchReset = false;
             }
 
@@ -108,45 +129,22 @@ int main()
             std::transform(queryStr.begin(), queryStr.end(), queryStr.begin(),
                            [](unsigned char c) { return std::tolower(c); });
 
-            auto icontains = [](const char *text, const std::string &query)
-            {
-                if (query.empty())
-                    return true;
-                const char *t = text;
-                while (*t)
-                {
-                    bool match = true;
-                    for (size_t i = 0; i < query.size(); i++)
-                    {
-                        if (t[i] == '\0' || std::tolower((unsigned char)t[i]) != query[i])
-                        {
-                            match = false;
-                            break;
-                        }
-                    }
-                    if (match)
-                        return true;
-                    t++;
-                }
-                return false;
-            };
-
             for (size_t i = 0; i < graph.Nodes.size(); i++)
             {
-                size_t idx = (i + searchOffset) % graph.Nodes.size();
+                size_t idx = (i + engineState.SearchOffset) % graph.Nodes.size();
 
                 if (icontains(graph.Nodes[idx].Name, queryStr))
                 {
                     engineState.SelectedNodeIndex = idx;
-                    searchOffset = idx + 1;
+                    engineState.SearchOffset = idx + 1;
                     found = true;
                     break;
                 }
             }
 
-            if (!found && searchOffset > 0)
+            if (!found && engineState.SearchOffset > 0)
             {
-                searchOffset = 0;
+                engineState.SearchOffset = 0;
             }
 
             engineState.SearchTriggered = false;

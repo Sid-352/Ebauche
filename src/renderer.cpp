@@ -44,25 +44,30 @@ void InitializeRenderer(RenderContext &outContext)
     outContext.Camera.fovy = 45.0f;
     outContext.Camera.projection = CAMERA_PERSPECTIVE;
 
-    Shader instancingShader = LoadShader(TextFormat("resources/shaders/glsl330/instancing.vs"),
-                                         TextFormat("resources/shaders/glsl330/instancing.fs"));
-    instancingShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instancingShader, "instanceTransform");
-    instancingShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instancingShader, "viewPos");
+    outContext.CameraPitch = -0.463f;
+    outContext.CameraYaw = 3.14159f;
+
+    outContext.InstancingShader = LoadShader(TextFormat("resources/shaders/glsl330/instancing.vs"),
+                                             TextFormat("resources/shaders/glsl330/instancing.fs"));
+    outContext.InstancingShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(outContext.InstancingShader, "instanceTransform");
+    outContext.InstancingShader.locs[SHADER_LOC_VECTOR_VIEW] =
+        GetShaderLocation(outContext.InstancingShader, "viewPos");
 
     outContext.PostProcessingShader = LoadShader(0, TextFormat("resources/shaders/glsl330/bloom.fs"));
 
     outContext.Target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 
+    outContext.DirModel = LoadModelFromMesh(GenMeshSphere(1.0f, 16, 16));
+    outContext.DirModel.materials[0].shader = outContext.InstancingShader;
+
+    Color starColors[10] = {{255, 40, 40, 255},   {255, 100, 50, 255},  {255, 150, 50, 255},  {255, 200, 80, 255},
+                            {255, 240, 100, 255}, {255, 250, 200, 255}, {255, 255, 255, 255}, {180, 220, 255, 255},
+                            {100, 200, 255, 255}, {50, 100, 255, 255}};
+
     for (int i = 0; i < 10; i++)
     {
-        outContext.DirModels[i] = LoadModelFromMesh(GenMeshSphere(1.0f, 16, 16));
-        outContext.DirModels[i].materials[0].shader = instancingShader;
-
-        Color starColors[10] = {{255, 40, 40, 255},   {255, 100, 50, 255},  {255, 150, 50, 255},  {255, 200, 80, 255},
-                                {255, 240, 100, 255}, {255, 250, 200, 255}, {255, 255, 255, 255}, {180, 220, 255, 255},
-                                {100, 200, 255, 255}, {50, 100, 255, 255}};
-
-        outContext.DirModels[i].materials[0].maps[MATERIAL_MAP_ALBEDO].color = starColors[i];
+        outContext.DirColors[i] = starColors[i];
     }
 
     if (backgroundStars.empty())
@@ -89,20 +94,11 @@ void InitializeRenderer(RenderContext &outContext)
     }
 }
 
-void UpdateCameraFreecam(Camera3D *camera, float dt)
-{
-    float speed = 400.0f;
-    if (IsKeyDown(KEY_LEFT_SHIFT))
-        speed *= 5.0f;
-}
-
 void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 {
-    static float pitch = -0.463f;
-    static float yaw = 3.14159f;
-
-    Vector3 forward = {cosf(pitch) * sinf(yaw), sinf(pitch), cosf(pitch) * cosf(yaw)};
-    Vector3 right = {cosf(yaw), 0.0f, -sinf(yaw)};
+    Vector3 forward = {cosf(context.CameraPitch) * sinf(context.CameraYaw), sinf(context.CameraPitch),
+                       cosf(context.CameraPitch) * cosf(context.CameraYaw)};
+    Vector3 right = {cosf(context.CameraYaw), 0.0f, -sinf(context.CameraYaw)};
     Vector3 up = {0.0f, 1.0f, 0.0f};
 
     if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE))
@@ -113,16 +109,22 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(right, -mouseDelta.x * panSpeed));
         context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(trueUp, mouseDelta.y * panSpeed));
     }
-    else if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
     {
         Vector2 mouseDelta = GetMouseDelta();
-        yaw -= mouseDelta.x * 0.005f;
-        pitch -= mouseDelta.y * 0.005f;
+        context.CameraYaw -= mouseDelta.x * 0.003f;
+        context.CameraPitch -= mouseDelta.y * 0.003f;
 
-        if (pitch > 1.5f)
-            pitch = 1.5f;
-        if (pitch < -1.5f)
-            pitch = -1.5f;
+        if (context.CameraPitch > 1.5f)
+            context.CameraPitch = 1.5f;
+        if (context.CameraPitch < -1.5f)
+            context.CameraPitch = -1.5f;
+
+        forward.x = cosf(context.CameraPitch) * sinf(context.CameraYaw);
+        forward.y = sinf(context.CameraPitch);
+        forward.z = cosf(context.CameraPitch) * cosf(context.CameraYaw);
+        right.x = cosf(context.CameraYaw);
+        right.z = -sinf(context.CameraYaw);
     }
 
     context.CameraSpeed += GetMouseWheelMove() * (context.CameraSpeed * 0.2f);
@@ -135,7 +137,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
     if (IsKeyDown(KEY_LEFT_ALT))
         currentSpeed *= 0.1f;
 
-    float moveSpeed = currentSpeed * GetFrameTime();
+    float moveSpeed = currentSpeed * state.DeltaTime;
 
     if (IsKeyDown(KEY_W))
         context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(forward, moveSpeed));
@@ -152,9 +154,8 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
     context.Camera.target = Vector3Add(context.Camera.position, forward);
 
-    Shader instancingShader = context.DirModels[0].materials[0].shader;
-    SetShaderValue(instancingShader, instancingShader.locs[SHADER_LOC_VECTOR_VIEW], &context.Camera.position,
-                   SHADER_UNIFORM_VEC3);
+    SetShaderValue(context.InstancingShader, context.InstancingShader.locs[SHADER_LOC_VECTOR_VIEW],
+                   &context.Camera.position, SHADER_UNIFORM_VEC3);
 
     if (IsWindowResized())
     {
@@ -185,7 +186,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         const auto &node = graph.Nodes[i];
         Vector3 diff = {node.Position.x - camPos.x, node.Position.y - camPos.y, node.Position.z - camPos.z};
 
-        if (diff.x * camForward.x + diff.y * camForward.y + diff.z * camForward.z < -50.0f)
+        if (diff.x * camForward.x + diff.y * camForward.y + diff.z * camForward.z < -5000.0f)
             continue;
 
         float distSqr = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
@@ -340,8 +341,9 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
     {
         if (!dirTransforms[i].empty())
         {
-            DrawMeshInstanced(context.DirModels[i].meshes[0], context.DirModels[i].materials[0],
-                              dirTransforms[i].data(), (int)dirTransforms[i].size());
+            context.DirModel.materials[0].maps[MATERIAL_MAP_ALBEDO].color = context.DirColors[i];
+            DrawMeshInstanced(context.DirModel.meshes[0], context.DirModel.materials[0], dirTransforms[i].data(),
+                              (int)dirTransforms[i].size());
         }
     }
 
@@ -438,6 +440,11 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
             if (label)
                 DrawText(label, (int)clampedPos.x - 40, (int)clampedPos.y - 10, 10, colorPrimary);
+
+            Vector2 p1 = {clampedPos.x + dir.x * 20.0f, clampedPos.y + dir.y * 20.0f};
+            Vector2 p2 = {clampedPos.x + dir.x * 10.0f - dir.y * 5.0f, clampedPos.y + dir.y * 10.0f + dir.x * 5.0f};
+            Vector2 p3 = {clampedPos.x + dir.x * 10.0f + dir.y * 5.0f, clampedPos.y + dir.y * 10.0f - dir.x * 5.0f};
+            DrawTriangle(p1, p2, p3, colorSecondary);
             return false;
         }
         return true;
@@ -546,11 +553,12 @@ void UpdateGraphAnimation(Graph &graph, float dt)
 
 void ShutdownRenderer(RenderContext &context)
 {
+    backgroundStars.clear();
+
+    UnloadShader(context.InstancingShader);
     UnloadShader(context.PostProcessingShader);
     UnloadRenderTexture(context.Target);
 
-    for (int i = 0; i < 10; i++)
-    {
-        UnloadModel(context.DirModels[i]);
-    }
+    context.DirModel.materials[0].shader = {0};
+    UnloadModel(context.DirModel);
 }

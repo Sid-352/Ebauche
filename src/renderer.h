@@ -8,7 +8,11 @@ struct RenderContext
 {
     Camera3D Camera;
     float CameraSpeed;
-    Model DirModels[10];
+    float CameraPitch;
+    float CameraYaw;
+    Shader InstancingShader;
+    Model DirModel;
+    Color DirColors[10];
     RenderTexture2D Target;
     Shader PostProcessingShader;
 };

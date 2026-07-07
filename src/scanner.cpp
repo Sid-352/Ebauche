@@ -11,7 +11,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
     std::unordered_map<std::string, size_t> pathToIndex;
     fs::path root(rootPath);
 
-    std::string canonicalRoot = root.lexically_normal().string();
+    std::string canonicalRoot = reinterpret_cast<const char *>(root.lexically_normal().u8string().c_str());
     if (!canonicalRoot.empty() && (canonicalRoot.back() == '\\' || canonicalRoot.back() == '/'))
     {
         canonicalRoot.pop_back();
@@ -22,7 +22,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
     rootNode.IsDirectory = true;
     rootNode.Depth = 0;
     rootNode.Radius = 1.0f;
-    std::string rootNameStr = root.filename().string();
+    std::string rootNameStr = reinterpret_cast<const char *>(root.filename().u8string().c_str());
     if (rootNameStr.empty())
         rootNameStr = canonicalRoot;
     strncpy_s(rootNode.Name, sizeof(rootNode.Name), rootNameStr.c_str(), _TRUNCATE);
@@ -40,12 +40,14 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
         try
         {
             const auto &entry = *it;
-            std::string parentPath = entry.path().parent_path().lexically_normal().string();
+            std::string parentPath =
+                reinterpret_cast<const char *>(entry.path().parent_path().lexically_normal().u8string().c_str());
             if (!parentPath.empty() && (parentPath.back() == '\\' || parentPath.back() == '/'))
             {
                 parentPath.pop_back();
             }
-            std::string currentPath = entry.path().lexically_normal().string();
+            std::string currentPath =
+                reinterpret_cast<const char *>(entry.path().lexically_normal().u8string().c_str());
             if (!currentPath.empty() && (currentPath.back() == '\\' || currentPath.back() == '/'))
             {
                 currentPath.pop_back();
@@ -60,7 +62,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 childNode.Position = {0.0f, 0.0f, 0.0f}; // Set during layout pass
                 childNode.Depth = outGraph.Nodes[parentIndex].Depth + 1;
                 bool isDir = false;
-                float mass = 1.0f;
+                uint64_t mass = 1;
                 try
                 {
                     isDir = entry.is_directory(ec);
@@ -69,7 +71,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                         std::error_code sizeEc;
                         uintmax_t size = fs::file_size(entry, sizeEc);
                         if (!sizeEc)
-                            mass = (float)size;
+                            mass = static_cast<uint64_t>(size);
                     }
                 }
                 catch (...)
@@ -78,7 +80,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
 
                 childNode.IsDirectory = isDir;
                 childNode.Mass = mass;
-                std::string childNameStr = entry.path().filename().string();
+                std::string childNameStr = reinterpret_cast<const char *>(entry.path().filename().u8string().c_str());
                 strncpy_s(childNode.Name, sizeof(childNode.Name), childNameStr.c_str(), _TRUNCATE);
                 strncpy_s(childNode.Path, sizeof(childNode.Path), currentPath.c_str(), _TRUNCATE);
 
@@ -121,7 +123,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
 
     for (auto &node : outGraph.Nodes)
     {
-        node.Radius = node.IsDirectory ? (0.5f + log10f(node.Mass + 1.0f) * 2.0f) : 0.25f;
+        node.Radius = node.IsDirectory ? (0.5f + log10(static_cast<double>(node.Mass) + 1.0) * 2.0f) : 0.25f;
     }
 
     LOG_INFO("Executing top-down Procedural Galaxy Layout...");

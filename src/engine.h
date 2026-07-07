@@ -10,7 +10,7 @@ struct EngineState
     float FileSizeMultiplier = 0.96f;
     bool IsZenModeEnabled;
     float SimulationSpeed = 0.5f;
-    float RenderDistance = 100000.0f;
+    float RenderDistance = 4000.0f;
     double PhysicsTimeMs;
     bool ShowGalacticCenter = true;
     bool ShowSelectionPopup = true;
@@ -18,6 +18,7 @@ struct EngineState
     size_t SelectedNodeIndex = (size_t)-1;
     char SearchQuery[256] = "";
     bool SearchTriggered = false;
+    size_t SearchOffset = 0;
     bool SearchReset = false;
 
     bool StatsCalculated = false;

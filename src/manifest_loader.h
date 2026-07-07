@@ -4,4 +4,4 @@
 #include <string>
 
 bool LoadGraphManifest(const std::string &path, Graph &outGraph);
-void SaveGraphManifest(const std::string &path, const Graph &graph);
+bool SaveGraphManifest(const std::string &path, const Graph &graph);

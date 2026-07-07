@@ -20,14 +20,14 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG v1.92.7
 )
-FetchContent_Populate(imgui)
+FetchContent_MakeAvailable(imgui)
 
 FetchContent_Declare(
     rlimgui
     GIT_REPOSITORY https://github.com/raylib-extras/rlImGui.git
-    GIT_TAG main
+    GIT_TAG ef129d1858373b6fe332c45f85a1dfc1421bebae
 )
-FetchContent_Populate(rlimgui)
+FetchContent_MakeAvailable(rlimgui)
 
 FetchContent_Declare(
     nlohmann_json
