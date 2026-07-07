@@ -10,6 +10,9 @@ void UpdatePhysics(Graph &graph, float deltaTime)
 
     for (auto &node : graph.Nodes)
     {
+        if (node.ParentIndex != (size_t)-1)
+            continue;
+
         float x = node.Position.x * c - node.Position.z * s;
         float z = node.Position.x * s + node.Position.z * c;
         node.Position.x = x;

@@ -178,11 +178,16 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
     Vector3 camPos = context.Camera.position;
     float maxDistSqr = state.RenderDistance * state.RenderDistance;
+    Vector3 camForward = Vector3Normalize(Vector3Subtract(context.Camera.target, context.Camera.position));
 
     for (size_t i = 0; i < graph.Nodes.size(); i++)
     {
         const auto &node = graph.Nodes[i];
         Vector3 diff = {node.Position.x - camPos.x, node.Position.y - camPos.y, node.Position.z - camPos.z};
+
+        if (diff.x * camForward.x + diff.y * camForward.y + diff.z * camForward.z < -50.0f)
+            continue;
+
         float distSqr = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
 
         if (distSqr > maxDistSqr)
@@ -225,6 +230,17 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
                     r *= 1.5f;
                     bucketIndex = 6;
                 }
+
+                if (massLog >= 9.0f)
+                {
+                    float extraScale = 1.0f + (massLog - 9.0f) * 2.5f;
+                    r *= extraScale;
+                    bucketIndex = 8;
+                }
+                if (massLog >= 11.0f)
+                {
+                    bucketIndex = 9;
+                }
             }
             if (i == state.SelectedNodeIndex)
                 r *= 1.5f;
@@ -250,10 +266,17 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
             float size = 0.8f + (safeT * 3.5f * state.FileSizeMultiplier);
 
-            if (massLog >= 10.0f)
+            if (massLog >= 9.0f)
             {
-                ptColor = {255, 255, 100, 255};
-                size *= 2.5f;
+                float extraScale = 1.0f + (massLog - 9.0f) * 2.5f;
+                size *= extraScale;
+
+                if (massLog >= 11.0f)
+                    ptColor = {200, 230, 255, 255};
+                else if (massLog >= 10.0f)
+                    ptColor = {255, 255, 100, 255};
+                else
+                    ptColor = {255, 180, 50, 255};
             }
 
             if (i == state.SelectedNodeIndex)
@@ -285,6 +308,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
         for (const auto &pt : backgroundStars)
         {
+            rlCheckRenderBatchLimit(24);
             float dx = pt.Pos.x - camPos.x;
             float dy = pt.Pos.y - camPos.y;
             float dz = pt.Pos.z - camPos.z;
@@ -330,6 +354,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         rlBegin(RL_QUADS);
         for (const auto &pt : filePoints)
         {
+            rlCheckRenderBatchLimit(4);
             float s = pt.Size;
             float cosA = cosf(pt.Angle);
             float sinA = sinf(pt.Angle);
@@ -354,7 +379,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
     EndMode3D();
     EndTextureMode();
-    
+
     size_t totalVisible = filePoints.size();
     for (int i = 0; i < 10; i++)
         totalVisible += dirTransforms[i].size();

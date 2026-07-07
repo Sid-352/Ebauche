@@ -72,9 +72,9 @@ void DrawUI(EngineState &state)
     double sizeTB = (double)state.TotalSize / (1024.0 * 1024.0 * 1024.0 * 1024.0);
     double sizeGB = (double)state.TotalSize / (1024.0 * 1024.0 * 1024.0);
     if (sizeTB >= 1.0)
-        ImGui::Text("%-16s %.2f TB", "Total Size:", sizeTB);
+        ImGui::Text("%-16s %.2f TB", "Total Mass:", sizeTB);
     else
-        ImGui::Text("%-16s %.2f GB", "Total Size:", sizeGB);
+        ImGui::Text("%-16s %.2f GB", "Total Mass:", sizeGB);
 
     ImGui::Dummy(ImVec2(0, 10));
 
@@ -84,7 +84,7 @@ void DrawUI(EngineState &state)
 
     ImGui::Text("%-15s %s", "Sector:", state.SelectedNodeName);
     ImGui::Text("%-15s %s", "Mass:", state.SelectedNodeSize);
-    ImGui::Text("%-15s %zu", "Objects visible:", state.VisibleObjects);
+    ImGui::Text("%-15s %zu", "Visible:", state.VisibleObjects);
 
     ImGui::PopStyleColor();
     ImGui::End();

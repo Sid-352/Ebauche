@@ -22,7 +22,7 @@ int main()
     engineState.DeltaTime = 0.0f;
     engineState.GlobalTime = 0.0f;
     engineState.IsZenModeEnabled = false;
-    engineState.SimulationSpeed = 1.0f;
+    engineState.SimulationSpeed = 0.5f;
     engineState.RenderDistance = 4000.0f;
     engineState.PhysicsTimeMs = 0.0;
 
@@ -31,13 +31,13 @@ int main()
     InitializeRenderer(renderContext);
 
     Graph graph;
-    LOG_INFO("Attempting to load graph manifest tools_manifest.bin...");
-    if (!LoadGraphManifest("tools_manifest", graph))
+    LOG_INFO("Attempting to load graph manifest ultimate.bin...");
+    if (!LoadGraphManifest("ultimate", graph))
     {
-        LOG_INFO("Manifest not found. Beginning ScanDirectory on N:/Tools/...");
-        ScanDirectory("N:/Tools/", graph);
+        LOG_INFO("Manifest not found. Beginning ScanDirectory on N:/...");
+        ScanDirectory("N:/", graph);
         LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
-        SaveGraphManifest("tools_manifest", graph);
+        SaveGraphManifest("ultimate", graph);
     }
     LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
 
@@ -66,9 +66,19 @@ int main()
             float closestHit = 999999999.0f;
             size_t newSelection = (size_t)-1;
 
+            float maxDistSqr = engineState.RenderDistance * engineState.RenderDistance;
+            Vector3 camPos = renderContext.Camera.position;
+
             for (size_t i = 0; i < graph.Nodes.size(); i++)
             {
                 const auto &node = graph.Nodes[i];
+
+                float dx = node.Position.x - camPos.x;
+                float dy = node.Position.y - camPos.y;
+                float dz = node.Position.z - camPos.z;
+                if (dx * dx + dy * dy + dz * dz > maxDistSqr)
+                    continue;
+
                 float r = 2.0f;
                 RayCollision collision = GetRayCollisionSphere(ray, node.Position, r);
                 if (collision.hit && collision.distance < closestHit)
@@ -98,14 +108,34 @@ int main()
             std::transform(queryStr.begin(), queryStr.end(), queryStr.begin(),
                            [](unsigned char c) { return std::tolower(c); });
 
+            auto icontains = [](const char *text, const std::string &query)
+            {
+                if (query.empty())
+                    return true;
+                const char *t = text;
+                while (*t)
+                {
+                    bool match = true;
+                    for (size_t i = 0; i < query.size(); i++)
+                    {
+                        if (t[i] == '\0' || std::tolower((unsigned char)t[i]) != query[i])
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match)
+                        return true;
+                    t++;
+                }
+                return false;
+            };
+
             for (size_t i = 0; i < graph.Nodes.size(); i++)
             {
                 size_t idx = (i + searchOffset) % graph.Nodes.size();
-                std::string nodeName = graph.Nodes[idx].Name;
-                std::transform(nodeName.begin(), nodeName.end(), nodeName.begin(),
-                               [](unsigned char c) { return std::tolower(c); });
 
-                if (nodeName.find(queryStr) != std::string::npos)
+                if (icontains(graph.Nodes[idx].Name, queryStr))
                 {
                     engineState.SelectedNodeIndex = idx;
                     searchOffset = idx + 1;
@@ -127,11 +157,14 @@ int main()
             for (size_t i = 0; i < graph.Nodes.size(); i++)
             {
                 if (graph.Nodes[i].IsDirectory)
+                {
                     engineState.TotalDirs++;
+                }
                 else
+                {
                     engineState.TotalFiles++;
-
-                engineState.TotalSize += graph.Nodes[i].Mass;
+                    engineState.TotalSize += graph.Nodes[i].Mass;
+                }
             }
             if (!graph.Nodes.empty())
             {

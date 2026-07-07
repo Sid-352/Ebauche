@@ -6,10 +6,10 @@ struct EngineState
 {
     float GlobalTime;
     float DeltaTime;
-    float SphereSizeMultiplier = 0.4f;
-    float FileSizeMultiplier = 1.2f;
+    float SphereSizeMultiplier = 0.32f;
+    float FileSizeMultiplier = 0.96f;
     bool IsZenModeEnabled;
-    float SimulationSpeed = 1.0f;
+    float SimulationSpeed = 0.5f;
     float RenderDistance = 100000.0f;
     double PhysicsTimeMs;
     bool ShowGalacticCenter = true;
