@@ -28,6 +28,5 @@ struct EngineState
     char RootFolderName[256] = "Orbital Drive";
     char SelectedNodeName[256] = "None";
     char SelectedNodeSize[64] = "0 B";
-    char SectorName[256] = "Uncharted Space";
     size_t VisibleObjects = 0;
 };

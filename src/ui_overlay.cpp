@@ -12,6 +12,15 @@ void DrawUI(EngineState &state)
 {
     if (state.IsZenModeEnabled)
     {
+        rlImGuiBegin();
+        ImGuiWindowFlags zenFlags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar |
+                                    ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs;
+        ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f));
+        ImGui::SetNextWindowSize(ImVec2(300.0f, 50.0f));
+        ImGui::Begin("ZenHUD", nullptr, zenFlags);
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 0.8f), "Zen Mode (Press Z to exit)");
+        ImGui::End();
+        rlImGuiEnd();
         return;
     }
 
@@ -28,7 +37,7 @@ void DrawUI(EngineState &state)
     ImGui::SliderFloat("File Size", &state.FileSizeMultiplier, 0.1f, 5.0f);
     ImGui::SliderFloat("Bloom Intensity", &state.BloomIntensity, 0.0f, 3.0f);
 
-    ImGui::SliderFloat("Render Distance", &state.RenderDistance, 100.0f, 1000000.0f, "%.3f",
+    ImGui::SliderFloat("Render Distance", &state.RenderDistance, 100.0f, 10000000.0f, "%.3f",
                        ImGuiSliderFlags_Logarithmic);
     ImGui::Checkbox("Show Galactic Center", &state.ShowGalacticCenter);
     ImGui::Checkbox("Show Selection Popup", &state.ShowSelectionPopup);

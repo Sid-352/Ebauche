@@ -23,16 +23,6 @@ static std::string FormatBytes(float bytes)
     return ss.str();
 }
 
-struct ColoredPoint
-{
-    Vector3 Pos;
-    Color Col;
-    float Size;
-    float Angle;
-};
-
-static std::vector<ColoredPoint> backgroundStars;
-
 void InitializeRenderer(RenderContext &outContext)
 {
     outContext.CameraSpeed = 400.0f;
@@ -70,7 +60,7 @@ void InitializeRenderer(RenderContext &outContext)
         outContext.DirColors[i] = starColors[i];
     }
 
-    if (backgroundStars.empty())
+    if (outContext.backgroundStars.empty())
     {
         for (int i = 0; i < 15000; i++)
         {
@@ -89,12 +79,12 @@ void InitializeRenderer(RenderContext &outContext)
                 col = {180, 200, 255, 255};
 
             float size = (float)GetRandomValue(5, 20) / 10.0f;
-            backgroundStars.push_back({pos, col, size, 0.0f});
+            outContext.backgroundStars.push_back({pos, col, size, 0.0f});
         }
     }
 }
 
-void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
+void UpdateCamera(RenderContext &context, EngineState &state)
 {
     Vector3 forward = {cosf(context.CameraPitch) * sinf(context.CameraYaw), sinf(context.CameraPitch),
                        cosf(context.CameraPitch) * cosf(context.CameraYaw)};
@@ -156,7 +146,10 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
     SetShaderValue(context.InstancingShader, context.InstancingShader.locs[SHADER_LOC_VECTOR_VIEW],
                    &context.Camera.position, SHADER_UNIFORM_VEC3);
+}
 
+void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
+{
     if (IsWindowResized())
     {
         UnloadRenderTexture(context.Target);
@@ -168,14 +161,11 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
     rlSetClipPlanes(1.0, state.RenderDistance + 100000.0);
     BeginMode3D(context.Camera);
 
-    static std::vector<Matrix> dirTransforms[10];
-    static std::vector<ColoredPoint> filePoints;
-
     for (int i = 0; i < 10; i++)
     {
-        dirTransforms[i].clear();
+        context.dirTransforms[i].clear();
     }
-    filePoints.clear();
+    context.filePoints.clear();
 
     Vector3 camPos = context.Camera.position;
     float maxDistSqr = state.RenderDistance * state.RenderDistance;
@@ -249,7 +239,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
             Matrix transform = MatrixMultiply(MatrixScale(r, r, r),
                                               MatrixTranslate(node.Position.x, node.Position.y, node.Position.z));
 
-            dirTransforms[bucketIndex].push_back(transform);
+            context.dirTransforms[bucketIndex].push_back(transform);
         }
         else
         {
@@ -285,14 +275,14 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
                 size *= 2.0f;
             }
 
-            filePoints.push_back({node.Position, ptColor, size, node.SpinAngle});
+            context.filePoints.push_back({node.Position, ptColor, size, node.SpinAngle});
         }
     }
 
-    if (!backgroundStars.empty())
+    if (!context.backgroundStars.empty())
     {
-        Vector3 camRight = right;
-        Vector3 camUp = Vector3CrossProduct(forward, camRight);
+        Vector3 camRight = {cosf(context.CameraYaw), 0.0f, -sinf(context.CameraYaw)};
+        Vector3 camUp = Vector3CrossProduct(camForward, camRight);
 
         rlDisableBackfaceCulling();
         rlBegin(RL_TRIANGLES);
@@ -307,12 +297,12 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
             circleOffsets[k] = Vector3Add(Vector3Scale(camRight, ca), Vector3Scale(camUp, sa));
         }
 
-        for (const auto &pt : backgroundStars)
+        for (const auto &pt : context.backgroundStars)
         {
             rlCheckRenderBatchLimit(24);
-            float dx = pt.Pos.x - camPos.x;
-            float dy = pt.Pos.y - camPos.y;
-            float dz = pt.Pos.z - camPos.z;
+            float dx = pt.Position.x - camPos.x;
+            float dy = pt.Position.y - camPos.y;
+            float dz = pt.Position.z - camPos.z;
 
             dx -= wrapSize * roundf(dx / wrapSize);
             dy -= wrapSize * roundf(dy / wrapSize);
@@ -339,22 +329,25 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
 
     for (int i = 0; i < 10; i++)
     {
-        if (!dirTransforms[i].empty())
+        int count = (int)context.dirTransforms[i].size();
+        if (count > 0)
         {
             context.DirModel.materials[0].maps[MATERIAL_MAP_ALBEDO].color = context.DirColors[i];
-            DrawMeshInstanced(context.DirModel.meshes[0], context.DirModel.materials[0], dirTransforms[i].data(),
-                              (int)dirTransforms[i].size());
+            DrawMeshInstanced(context.DirModel.meshes[0], context.DirModel.materials[0],
+                              context.dirTransforms[i].data(), count);
         }
     }
 
-    if (!filePoints.empty())
+    if (!context.filePoints.empty())
     {
-        Vector3 camRight = right;
-        Vector3 camUp = Vector3CrossProduct(forward, camRight);
+        Vector3 camForward = {cosf(context.CameraPitch) * sinf(context.CameraYaw), sinf(context.CameraPitch),
+                              cosf(context.CameraPitch) * cosf(context.CameraYaw)};
+        Vector3 camRight = {cosf(context.CameraYaw), 0.0f, -sinf(context.CameraYaw)};
+        Vector3 camUp = Vector3CrossProduct(camForward, camRight);
 
         rlDisableBackfaceCulling();
         rlBegin(RL_QUADS);
-        for (const auto &pt : filePoints)
+        for (const auto &pt : context.filePoints)
         {
             rlCheckRenderBatchLimit(4);
             float s = pt.Size;
@@ -370,10 +363,10 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
             Vector3 p3_offset = Vector3Add(Vector3Scale(localRight, -s), Vector3Scale(localUp, s));
 
             rlColor4ub(pt.Col.r, pt.Col.g, pt.Col.b, pt.Col.a);
-            rlVertex3f(pt.Pos.x + p0_offset.x, pt.Pos.y + p0_offset.y, pt.Pos.z + p0_offset.z);
-            rlVertex3f(pt.Pos.x + p1_offset.x, pt.Pos.y + p1_offset.y, pt.Pos.z + p1_offset.z);
-            rlVertex3f(pt.Pos.x + p2_offset.x, pt.Pos.y + p2_offset.y, pt.Pos.z + p2_offset.z);
-            rlVertex3f(pt.Pos.x + p3_offset.x, pt.Pos.y + p3_offset.y, pt.Pos.z + p3_offset.z);
+            rlVertex3f(pt.Position.x + p0_offset.x, pt.Position.y + p0_offset.y, pt.Position.z + p0_offset.z);
+            rlVertex3f(pt.Position.x + p1_offset.x, pt.Position.y + p1_offset.y, pt.Position.z + p1_offset.z);
+            rlVertex3f(pt.Position.x + p2_offset.x, pt.Position.y + p2_offset.y, pt.Position.z + p2_offset.z);
+            rlVertex3f(pt.Position.x + p3_offset.x, pt.Position.y + p3_offset.y, pt.Position.z + p3_offset.z);
         }
         rlEnd();
         rlEnableBackfaceCulling();
@@ -382,12 +375,11 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
     EndMode3D();
     EndTextureMode();
 
-    size_t totalVisible = filePoints.size();
+    size_t totalVisible = context.filePoints.size();
     for (int i = 0; i < 10; i++)
-        totalVisible += dirTransforms[i].size();
+        totalVisible += context.dirTransforms[i].size();
     state.VisibleObjects = totalVisible;
 
-    BeginDrawing();
     ClearBackground(BLACK);
 
     float resolution[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
@@ -524,36 +516,12 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
     }
 }
 
-void UpdateGraphAnimation(Graph &graph, float dt)
-{
-    for (auto &node : graph.Nodes)
-    {
-        if (node.ParentIndex == (size_t)-1)
-            continue;
-
-        node.OrbitAngle += node.OrbitSpeed * dt;
-        node.SpinAngle += node.SpinSpeed * dt;
-        node.RadiusJitterPhase += node.RadiusJitterSpeed * dt;
-
-        float currentRadius = node.OrbitRadius + sinf(node.RadiusJitterPhase) * node.RadiusJitterAmp;
-
-        float localX = cosf(node.OrbitAngle) * currentRadius;
-        float localZ = sinf(node.OrbitAngle) * currentRadius * (1.0f - node.Eccentricity);
-
-        float rot = node.OrbitRotation;
-        float worldX = localX * cosf(rot) - localZ * sinf(rot);
-        float worldZ = localX * sinf(rot) + localZ * cosf(rot);
-
-        Vector3 parentPos = graph.Nodes[node.ParentIndex].Position;
-        node.Position.x = parentPos.x + worldX;
-        node.Position.y = parentPos.y + node.YOffset + sinf(node.OrbitAngle) * node.OrbitTilt * currentRadius;
-        node.Position.z = parentPos.z + worldZ;
-    }
-}
-
 void ShutdownRenderer(RenderContext &context)
 {
-    backgroundStars.clear();
+    context.backgroundStars.clear();
+    for (int i = 0; i < 10; i++)
+        context.dirTransforms[i].clear();
+    context.filePoints.clear();
 
     UnloadShader(context.InstancingShader);
     UnloadShader(context.PostProcessingShader);

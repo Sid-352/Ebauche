@@ -53,13 +53,13 @@ int main()
     InitializeRenderer(renderContext);
 
     Graph graph;
-    LOG_INFO("Attempting to load graph manifest ultimate.bin...");
-    if (!LoadGraphManifest("ultimate", graph))
+    LOG_INFO("Attempting to load graph manifest N_Others.bin...");
+    if (!LoadGraphManifest("N_Others", graph))
     {
-        LOG_INFO("Manifest not found. Beginning ScanDirectory on N:/...");
-        ScanDirectory("N:/", graph);
+        LOG_INFO("Manifest not found. Beginning ScanDirectory on N:/Others...");
+        ScanDirectory("N:/Others", graph);
         LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
-        SaveGraphManifest("ultimate", graph);
+        SaveGraphManifest("N_Others", graph);
     }
     LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
 
@@ -69,7 +69,6 @@ int main()
 
     while (!WindowShouldClose())
     {
-        double frameStartTime = GetTime();
         engineState.DeltaTime = GetFrameTime();
         engineState.GlobalTime += engineState.DeltaTime;
 
@@ -198,7 +197,8 @@ int main()
             }
         }
 
-        UpdateGraphAnimation(graph, engineState.DeltaTime * engineState.SimulationSpeed);
+        UpdateCamera(renderContext, engineState);
+        BeginDrawing();
         DrawScene(renderContext, engineState, graph);
         DrawUI(engineState);
         EndDrawing();
@@ -206,6 +206,7 @@ int main()
 
     ShutdownUI();
     ShutdownRenderer(renderContext);
+    ShutdownLogger();
     CloseWindow();
 
     return 0;

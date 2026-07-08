@@ -4,6 +4,16 @@
 #include "graph.h"
 #include <raylib.h>
 
+#include <vector>
+
+struct ColoredPoint
+{
+    Vector3 Position;
+    Color Col;
+    float Size;
+    float Angle;
+};
+
 struct RenderContext
 {
     Camera3D Camera;
@@ -15,9 +25,13 @@ struct RenderContext
     Color DirColors[10];
     RenderTexture2D Target;
     Shader PostProcessingShader;
+
+    std::vector<ColoredPoint> backgroundStars;
+    std::vector<Matrix> dirTransforms[10];
+    std::vector<ColoredPoint> filePoints;
 };
 
 void InitializeRenderer(RenderContext &outContext);
+void UpdateCamera(RenderContext &context, EngineState &state);
 void DrawScene(RenderContext &context, EngineState &state, const Graph &graph);
-void UpdateGraphAnimation(Graph &graph, float dt);
 void ShutdownRenderer(RenderContext &context);

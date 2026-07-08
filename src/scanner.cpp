@@ -21,7 +21,6 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
     rootNode.Position = {0.0f, 0.0f, 0.0f};
     rootNode.IsDirectory = true;
     rootNode.Depth = 0;
-    rootNode.Radius = 1.0f;
     std::string rootNameStr = reinterpret_cast<const char *>(root.filename().u8string().c_str());
     if (rootNameStr.empty())
         rootNameStr = canonicalRoot;
@@ -121,11 +120,6 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
         outGraph.Nodes[parentIdx].Mass += outGraph.Nodes[childIdx].Mass;
     }
 
-    for (auto &node : outGraph.Nodes)
-    {
-        node.Radius = node.IsDirectory ? (0.5f + log10(static_cast<double>(node.Mass) + 1.0) * 2.0f) : 0.25f;
-    }
-
     LOG_INFO("Executing top-down Procedural Galaxy Layout...");
 
     std::vector<std::vector<size_t>> adj(outGraph.Nodes.size());
@@ -156,68 +150,60 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
             float theta = static_cast<float>(GetRandomValue(0, 628318)) / 100000.0f;
             float rRandom = static_cast<float>(GetRandomValue(0, 1000)) / 1000.0f;
 
+            struct GalaxyParams
+            {
+                float rBase, rMult;
+                float thickness;
+                float tiltLimit;
+                float keplerBase;
+                float orbitSpeedMin, orbitSpeedMax;
+                float spinSpeedMin, spinSpeedMax;
+                float eccMin, eccMax;
+                float jitterSpeedMin, jitterSpeedMax;
+                float jitterAmpMin, jitterAmpMax;
+            };
+
+            GalaxyParams p;
             if (outGraph.Nodes[childIdx].IsDirectory)
             {
-                float r = outGraph.Nodes[i].Radius + 10.0f + ((rRandom * rRandom) * 3500.0f);
-                const float thickness = 300.0f * (1.0f - rRandom);
-                float yOffset = (static_cast<float>(GetRandomValue(-1000, 1000)) / 1000.0f) * thickness;
-                float tilt = (static_cast<float>(GetRandomValue(-500, 500)) / 1000.0f);
-
-                outGraph.Nodes[childIdx].ParentIndex = i;
-                outGraph.Nodes[childIdx].OrbitRadius = r;
-                outGraph.Nodes[childIdx].OrbitAngle = theta;
-
-                float keplerSpeed = 10.0f / sqrtf(r + 1.0f);
-                outGraph.Nodes[childIdx].OrbitSpeed =
-                    keplerSpeed * (static_cast<float>(GetRandomValue(50, 150)) / 1000.0f);
-
-                outGraph.Nodes[childIdx].YOffset = yOffset;
-                outGraph.Nodes[childIdx].OrbitTilt = tilt;
-                outGraph.Nodes[childIdx].SpinAngle = (static_cast<float>(GetRandomValue(0, 628)) / 100.0f);
-                outGraph.Nodes[childIdx].SpinSpeed = (static_cast<float>(GetRandomValue(-50, 50)) / 1000.0f);
-
-                outGraph.Nodes[childIdx].OrbitRotation = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
-                outGraph.Nodes[childIdx].Eccentricity = static_cast<float>(GetRandomValue(30, 80)) / 100.0f;
-                outGraph.Nodes[childIdx].RadiusJitterPhase = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
-                outGraph.Nodes[childIdx].RadiusJitterSpeed =
-                    outGraph.Nodes[childIdx].OrbitSpeed * (static_cast<float>(GetRandomValue(90, 110)) / 100.0f);
-                outGraph.Nodes[childIdx].RadiusJitterAmp = r * (static_cast<float>(GetRandomValue(5, 15)) / 100.0f);
-
-                outGraph.Nodes[childIdx].Position = {
-                    outGraph.Nodes[i].Position.x + cosf(theta) * r, outGraph.Nodes[i].Position.y + yOffset,
-                    outGraph.Nodes[i].Position.z + sinf(theta) * r * (1.0f - outGraph.Nodes[childIdx].Eccentricity)};
+                p = {10.0f, 3500.0f, 300.0f, 0.5f, 10.0f, 0.05f, 0.15f, -0.05f,
+                     0.05f, 0.3f,    0.8f,   0.9f, 1.1f,  0.05f, 0.15f};
             }
             else
             {
-                float r = outGraph.Nodes[i].Radius + 1.0f + ((rRandom * rRandom) * 150.0f);
-                const float thickness = 20.0f * (1.0f - rRandom);
-                float yOffset = (static_cast<float>(GetRandomValue(-1000, 1000)) / 1000.0f) * thickness;
-                float tilt = (static_cast<float>(GetRandomValue(-150, 150)) / 1000.0f);
-
-                outGraph.Nodes[childIdx].ParentIndex = i;
-                outGraph.Nodes[childIdx].OrbitRadius = r;
-                outGraph.Nodes[childIdx].OrbitAngle = theta;
-
-                float keplerSpeed = 30.0f / sqrtf(r + 1.0f);
-                outGraph.Nodes[childIdx].OrbitSpeed =
-                    keplerSpeed * (static_cast<float>(GetRandomValue(50, 150)) / 100.0f);
-
-                outGraph.Nodes[childIdx].YOffset = yOffset;
-                outGraph.Nodes[childIdx].OrbitTilt = tilt;
-                outGraph.Nodes[childIdx].SpinAngle = (static_cast<float>(GetRandomValue(0, 628)) / 100.0f);
-                outGraph.Nodes[childIdx].SpinSpeed = (static_cast<float>(GetRandomValue(-200, 200)) / 1000.0f);
-
-                outGraph.Nodes[childIdx].OrbitRotation = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
-                outGraph.Nodes[childIdx].Eccentricity = static_cast<float>(GetRandomValue(50, 80)) / 100.0f;
-                outGraph.Nodes[childIdx].RadiusJitterPhase = static_cast<float>(GetRandomValue(0, 628)) / 100.0f;
-                outGraph.Nodes[childIdx].RadiusJitterSpeed =
-                    outGraph.Nodes[childIdx].OrbitSpeed * (static_cast<float>(GetRandomValue(80, 120)) / 100.0f);
-                outGraph.Nodes[childIdx].RadiusJitterAmp = r * (static_cast<float>(GetRandomValue(2, 10)) / 100.0f);
-
-                outGraph.Nodes[childIdx].Position = {
-                    outGraph.Nodes[i].Position.x + cosf(theta) * r, outGraph.Nodes[i].Position.y + yOffset,
-                    outGraph.Nodes[i].Position.z + sinf(theta) * r * (1.0f - outGraph.Nodes[childIdx].Eccentricity)};
+                p = {1.0f, 150.0f, 20.0f, 0.15f, 30.0f, 0.5f, 1.5f, -0.2f, 0.2f, 0.5f, 0.8f, 0.8f, 1.2f, 0.02f, 0.10f};
             }
+
+            auto randFloat = [](float min, float max)
+            { return min + (max - min) * (static_cast<float>(GetRandomValue(0, 1000)) / 1000.0f); };
+
+            float r = p.rBase + ((rRandom * rRandom) * p.rMult);
+            float thick = p.thickness * (1.0f - rRandom);
+            float yOffset = randFloat(-1.0f, 1.0f) * thick;
+            float tilt = randFloat(-p.tiltLimit, p.tiltLimit);
+
+            outGraph.Nodes[childIdx].ParentIndex = i;
+            outGraph.Nodes[childIdx].OrbitRadius = r;
+            outGraph.Nodes[childIdx].OrbitAngle = theta;
+
+            float keplerSpeed = p.keplerBase / sqrtf(r + 1.0f);
+            outGraph.Nodes[childIdx].OrbitSpeed = keplerSpeed * randFloat(p.orbitSpeedMin, p.orbitSpeedMax);
+
+            outGraph.Nodes[childIdx].YOffset = yOffset;
+            outGraph.Nodes[childIdx].OrbitTilt = tilt;
+            outGraph.Nodes[childIdx].SpinAngle = randFloat(0.0f, 6.28f);
+            outGraph.Nodes[childIdx].SpinSpeed = randFloat(p.spinSpeedMin, p.spinSpeedMax);
+
+            outGraph.Nodes[childIdx].OrbitRotation = randFloat(0.0f, 6.28f);
+            outGraph.Nodes[childIdx].Eccentricity = randFloat(p.eccMin, p.eccMax);
+            outGraph.Nodes[childIdx].RadiusJitterPhase = randFloat(0.0f, 6.28f);
+            outGraph.Nodes[childIdx].RadiusJitterSpeed =
+                outGraph.Nodes[childIdx].OrbitSpeed * randFloat(p.jitterSpeedMin, p.jitterSpeedMax);
+            outGraph.Nodes[childIdx].RadiusJitterAmp = r * randFloat(p.jitterAmpMin, p.jitterAmpMax);
+
+            outGraph.Nodes[childIdx].Position = {
+                outGraph.Nodes[i].Position.x + cosf(theta) * r, outGraph.Nodes[i].Position.y + yOffset,
+                outGraph.Nodes[i].Position.z + sinf(theta) * r * (1.0f - outGraph.Nodes[childIdx].Eccentricity)};
         }
     }
 

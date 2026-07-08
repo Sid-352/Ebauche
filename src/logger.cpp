@@ -52,3 +52,13 @@ void LogMessage(LogLevel level, const char *file, int line, const char *fmt, ...
         fflush(s_LogFile);
     }
 }
+
+void ShutdownLogger()
+{
+    std::lock_guard<std::mutex> lock(s_LogMutex);
+    if (s_LogFile)
+    {
+        fclose(s_LogFile);
+        s_LogFile = nullptr;
+    }
+}

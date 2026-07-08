@@ -10,7 +10,6 @@ struct Node
     char Path[512];
     bool IsDirectory;
     uint64_t Mass;
-    float Radius;
     int Depth;
     Vector3 Position;
     Vector3 Velocity = {0.0f, 0.0f, 0.0f};

@@ -22,7 +22,7 @@ void main()
     fragColor = vertexColor;
     
     fragPosition = vec3(instanceTransform * vec4(vertexPosition, 1.0));
-    mat3 normalMatrix = transpose(inverse(mat3(instanceTransform)));
+    mat3 normalMatrix = mat3(instanceTransform);
     fragNormal = normalize(normalMatrix * vertexNormal);
     
     gl_Position = mvpi * vec4(vertexPosition, 1.0);

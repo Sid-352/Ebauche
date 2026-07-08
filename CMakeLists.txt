@@ -4,6 +4,8 @@ project(Ebauche VERSION 0.1.0 LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -18,7 +20,7 @@ FetchContent_MakeAvailable(raylib)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.7
+    GIT_TAG master
 )
 FetchContent_MakeAvailable(imgui)
 
@@ -29,12 +31,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(rlimgui)
 
-FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.12.0
-)
-FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(imgui_lib STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
