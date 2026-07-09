@@ -1,0 +1,43 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path CMakeLists.txt -Pattern 'project\(Ebauche VERSION ([0-9.]+)').Matches.Groups[1].Value
+          echo "VERSION=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Stage artifact
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.VERSION }}"
+          $out = "dist"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item "build\Release\Ebauche.exe" "$out\ebauche_$v.exe"
+          Copy-Item "imgui.ini" "$out\imgui.ini"
+          Copy-Item -Recurse "resources" "$out\resources"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebauche-windows-${{ steps.version.outputs.VERSION }}
+          path: dist/

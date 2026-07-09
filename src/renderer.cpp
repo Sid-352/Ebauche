@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "imgui.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -142,18 +143,21 @@ void UpdateCamera(RenderContext &context, EngineState &state)
 
     float moveSpeed = currentSpeed * state.DeltaTime;
 
-    if (IsKeyDown(KEY_W))
-        context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(forward, moveSpeed));
-    if (IsKeyDown(KEY_S))
-        context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(forward, moveSpeed));
-    if (IsKeyDown(KEY_A))
-        context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(right, moveSpeed));
-    if (IsKeyDown(KEY_D))
-        context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(right, moveSpeed));
-    if (IsKeyDown(KEY_SPACE))
-        context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(up, moveSpeed));
-    if (IsKeyDown(KEY_LEFT_SHIFT))
-        context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(up, moveSpeed));
+    if (!ImGui::GetIO().WantCaptureKeyboard)
+    {
+        if (IsKeyDown(KEY_W))
+            context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(forward, moveSpeed));
+        if (IsKeyDown(KEY_S))
+            context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(forward, moveSpeed));
+        if (IsKeyDown(KEY_A))
+            context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(right, moveSpeed));
+        if (IsKeyDown(KEY_D))
+            context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(right, moveSpeed));
+        if (IsKeyDown(KEY_SPACE))
+            context.Camera.position = Vector3Add(context.Camera.position, Vector3Scale(up, moveSpeed));
+        if (IsKeyDown(KEY_LEFT_SHIFT))
+            context.Camera.position = Vector3Subtract(context.Camera.position, Vector3Scale(up, moveSpeed));
+    }
 
     context.Camera.target = Vector3Add(context.Camera.position, forward);
 

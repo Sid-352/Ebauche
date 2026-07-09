@@ -35,7 +35,11 @@ void LogMessage(LogLevel level, const char *file, int line, const char *fmt, ...
 
     time_t const now = time(nullptr);
     struct tm tstruct;
+#ifdef _WIN32
     localtime_s(&tstruct, &now);
+#else
+    localtime_r(&now, &tstruct);
+#endif
     char timebuf[80];
     strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", &tstruct);
 

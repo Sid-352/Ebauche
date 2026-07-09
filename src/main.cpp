@@ -1,4 +1,5 @@
 #include "engine.h"
+#include "imgui.h"
 #include "logger.h"
 #include "manifest_loader.h"
 #include "physics.h"
@@ -150,7 +151,7 @@ int main()
         engineState.DeltaTime = GetFrameTime();
         engineState.GlobalTime += engineState.DeltaTime;
 
-        if (IsKeyPressed(KEY_Z))
+        if (IsKeyPressed(KEY_Z) && !ImGui::GetIO().WantCaptureKeyboard)
         {
             engineState.IsZenModeEnabled = !engineState.IsZenModeEnabled;
         }

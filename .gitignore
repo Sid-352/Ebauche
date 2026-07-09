@@ -22,9 +22,9 @@ Release/
 # Runtime/build artifacts
 *.exe
 *.log
-*.ini 
 
 # IDE/tooling
 .*/
+!.github/
 *.VC.db
 *.VC.opendb
