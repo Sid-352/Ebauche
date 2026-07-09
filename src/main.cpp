@@ -58,6 +58,7 @@ int main()
     Graph graph;
     std::atomic<size_t> scanNodeCount = 0;
     std::atomic<bool> scanComplete = false;
+    std::atomic<bool> cancelScan(false);
     std::thread scanThread;
 
     enum class AppState
@@ -92,7 +93,8 @@ int main()
                     LOG_INFO("Attempting to load graph manifest %s...", startupOptions.ManifestName);
                     if (LoadGraphManifest(startupOptions.ManifestName, graph))
                     {
-                        LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
+                        LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(),
+                                 graph.Edges.size());
                         scanComplete = true;
                         appState = AppState::Simulation;
                     }
@@ -107,11 +109,14 @@ int main()
                     std::string scanDir = startupOptions.DirectoryPath;
                     std::string manifestOut = startupOptions.ManifestName;
                     scanThread = std::thread(
-                        [&graph, &scanNodeCount, &scanComplete, scanDir, manifestOut]()
+                        [&graph, &scanNodeCount, &scanComplete, &cancelScan, scanDir, manifestOut]()
                         {
-                            ScanDirectory(scanDir, graph, &scanNodeCount);
-                            LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
-                            SaveGraphManifest(manifestOut, graph);
+                            ScanDirectory(scanDir, graph, &scanNodeCount, &cancelScan);
+                            if (!cancelScan)
+                            {
+                                LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
+                                SaveGraphManifest(manifestOut, graph);
+                            }
                             scanComplete = true;
                         });
                     appState = AppState::Scanning;
@@ -238,7 +243,7 @@ int main()
             command = "xdg-open \"" + pathStr + "\"";
 #endif
             LOG_INFO("Executing UI button command: %s", command.c_str());
-            std::system(command.c_str());
+            std::thread([command]() { std::system(command.c_str()); }).detach();
         }
 
         if (engineState.SearchTriggered && strlen(engineState.SearchQuery) > 0)
@@ -302,7 +307,8 @@ int main()
             lastSelected = engineState.SelectedNodeIndex;
             if (engineState.SelectedNodeIndex != (size_t)-1 && engineState.SelectedNodeIndex < graph.Nodes.size())
             {
-                snprintf(engineState.SelectedNodeName, sizeof(engineState.SelectedNodeName), "%s", graph.Nodes[engineState.SelectedNodeIndex].Name);
+                snprintf(engineState.SelectedNodeName, sizeof(engineState.SelectedNodeName), "%s",
+                         graph.Nodes[engineState.SelectedNodeIndex].Name);
 
                 double sz = (double)graph.Nodes[engineState.SelectedNodeIndex].Mass;
                 if (sz > 1024.0 * 1024.0 * 1024.0)
@@ -329,14 +335,14 @@ int main()
     }
 
     ShutdownUI();
-    ShutdownRenderer(renderContext);
-    ShutdownLogger();
-    CloseWindow();
-
+    cancelScan = true;
     if (scanThread.joinable())
     {
         scanThread.join();
     }
+    ShutdownRenderer(renderContext);
+    ShutdownLogger();
+    CloseWindow();
 
     return 0;
 }

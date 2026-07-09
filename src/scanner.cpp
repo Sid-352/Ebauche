@@ -1,13 +1,14 @@
 #include "scanner.h"
 #include "logger.h"
+#include <cstdio>
 #include <filesystem>
 #include <raylib.h>
 #include <unordered_map>
-#include <cstdio>
 
 namespace fs = std::filesystem;
 
-void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<size_t> *progressCounter)
+void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<size_t> *progressCounter,
+                   std::atomic<bool> *cancelFlag)
 {
     std::unordered_map<std::string, size_t> pathToIndex;
     fs::path root(rootPath);
@@ -37,6 +38,12 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<siz
 
     while (it != end && !ec)
     {
+        if (cancelFlag && cancelFlag->load())
+        {
+            LOG_INFO("Scan cancelled by user.");
+            break;
+        }
+
         try
         {
             const auto &entry = *it;

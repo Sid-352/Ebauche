@@ -3,11 +3,11 @@
 #include "rlImGui.h"
 #include "tinyfiledialogs.h"
 #include <algorithm>
+#include <array>
+#include <cstring>
 #include <filesystem>
 #include <raylib.h>
 #include <string>
-#include <cstring>
-#include <array>
 
 void InitializeUI()
 {
@@ -105,7 +105,7 @@ void DrawUI(EngineState &state)
     ImGui::Text("%-15s %s", "Sector:", state.SelectedNodeName);
     ImGui::Text("%-15s %s", "Mass:", state.SelectedNodeSize);
     ImGui::Text("%-15s %zu", "Visible:", state.VisibleObjects);
-    
+
     if (state.SelectedNodeIndex != (size_t)-1)
     {
         ImGui::Spacing();
@@ -126,7 +126,9 @@ void DrawUI(EngineState &state)
 void DrawStartupMenu(StartupOptions &options)
 {
     rlImGuiBegin();
-    ImGui::SetNextWindowPos(ImVec2(static_cast<float>(GetScreenWidth()) / 2.0f, static_cast<float>(GetScreenHeight()) / 2.0f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowPos(
+        ImVec2(static_cast<float>(GetScreenWidth()) / 2.0f, static_cast<float>(GetScreenHeight()) / 2.0f),
+        ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(600, 300), ImGuiCond_Once);
 
     ImGui::Begin("Startup", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -156,7 +158,7 @@ void DrawStartupMenu(StartupOptions &options)
         ImGui::SameLine();
         if (ImGui::Button("Browse##dir"))
         {
-            const char* path = tinyfd_selectFolderDialog("Select Directory to Scan", options.DirectoryPath);
+            const char *path = tinyfd_selectFolderDialog("Select Directory to Scan", options.DirectoryPath);
             if (path != nullptr)
             {
                 snprintf(options.DirectoryPath, sizeof(options.DirectoryPath), "%s", path);
@@ -165,7 +167,7 @@ void DrawStartupMenu(StartupOptions &options)
 
         ImGui::Spacing();
         ImGui::Checkbox("Auto-name Manifest File", &options.AutoNameManifest);
-        
+
         if (options.AutoNameManifest)
         {
             std::string pathStr = options.DirectoryPath;
@@ -174,11 +176,11 @@ void DrawStartupMenu(StartupOptions &options)
             std::replace(pathStr.begin(), pathStr.end(), '/', '_');
             std::replace(pathStr.begin(), pathStr.end(), ' ', '_');
 
-            while(!pathStr.empty() && pathStr[0] == '_')
+            while (!pathStr.empty() && pathStr[0] == '_')
             {
                 pathStr.erase(0, 1);
             }
-            
+
             std::string autoName = "manifest_" + pathStr;
             snprintf(options.ManifestName, sizeof(options.ManifestName), "%s", autoName.c_str());
         }
@@ -203,8 +205,8 @@ void DrawStartupMenu(StartupOptions &options)
         ImGui::SameLine();
         if (ImGui::Button("Browse##man"))
         {
-            const std::array<const char*, 1> filters = { "*.bin" };
-            const char* path = tinyfd_openFileDialog("Select Manifest", "", 1, filters.data(), "Binary Manifest", 0);
+            const std::array<const char *, 1> filters = {"*.bin"};
+            const char *path = tinyfd_openFileDialog("Select Manifest", "", 1, filters.data(), "Binary Manifest", 0);
             if (path != nullptr)
             {
                 std::string fullPath = path;
@@ -218,7 +220,7 @@ void DrawStartupMenu(StartupOptions &options)
     }
 
     ImGui::Spacing();
-    
+
     bool canStart = (strlen(options.DirectoryPath) > 0 && strlen(options.ManifestName) > 0);
     if (options.IsLoadMode)
     {
