@@ -1,7 +1,13 @@
 #include "ui_overlay.h"
 #include "imgui.h"
 #include "rlImGui.h"
+#include "tinyfiledialogs.h"
+#include <algorithm>
+#include <filesystem>
 #include <raylib.h>
+#include <string>
+#include <cstring>
+#include <array>
 
 void InitializeUI()
 {
@@ -103,6 +109,125 @@ void DrawUI(EngineState &state)
     ImGui::PopStyleColor();
     ImGui::End();
 
+    rlImGuiEnd();
+}
+
+void DrawStartupMenu(StartupOptions &options)
+{
+    rlImGuiBegin();
+    ImGui::SetNextWindowPos(ImVec2(static_cast<float>(GetScreenWidth()) / 2.0f, static_cast<float>(GetScreenHeight()) / 2.0f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(600, 300), ImGuiCond_Once);
+
+    ImGui::Begin("Startup", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+    ImGui::Text("Welcome to Ebauche. Please select an action:");
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    if (ImGui::RadioButton("Scan New Directory", !options.IsLoadMode))
+    {
+        options.IsLoadMode = false;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Load from Manifest", options.IsLoadMode))
+    {
+        options.IsLoadMode = true;
+    }
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    if (!options.IsLoadMode)
+    {
+        ImGui::Text("Directory to Scan:");
+        ImGui::SetNextItemWidth(450);
+        ImGui::InputText("##dir", options.DirectoryPath, sizeof(options.DirectoryPath));
+        ImGui::SameLine();
+        if (ImGui::Button("Browse##dir"))
+        {
+            const char* path = tinyfd_selectFolderDialog("Select Directory to Scan", options.DirectoryPath);
+            if (path != nullptr)
+            {
+                snprintf(options.DirectoryPath, sizeof(options.DirectoryPath), "%s", path);
+            }
+        }
+
+        ImGui::Spacing();
+        ImGui::Checkbox("Auto-name Manifest File", &options.AutoNameManifest);
+        
+        if (options.AutoNameManifest)
+        {
+            std::string pathStr = options.DirectoryPath;
+            std::replace(pathStr.begin(), pathStr.end(), '\\', '_');
+            std::replace(pathStr.begin(), pathStr.end(), ':', '_');
+            std::replace(pathStr.begin(), pathStr.end(), '/', '_');
+            std::replace(pathStr.begin(), pathStr.end(), ' ', '_');
+
+            while(!pathStr.empty() && pathStr[0] == '_')
+            {
+                pathStr.erase(0, 1);
+            }
+            
+            std::string autoName = "manifest_" + pathStr;
+            snprintf(options.ManifestName, sizeof(options.ManifestName), "%s", autoName.c_str());
+        }
+
+        ImGui::Text("Manifest File Name (without .bin):");
+        ImGui::SetNextItemWidth(450);
+        if (options.AutoNameManifest)
+        {
+            ImGui::BeginDisabled();
+        }
+        ImGui::InputText("##manifest", options.ManifestName, sizeof(options.ManifestName));
+        if (options.AutoNameManifest)
+        {
+            ImGui::EndDisabled();
+        }
+    }
+    else
+    {
+        ImGui::Text("Manifest File to Load:");
+        ImGui::SetNextItemWidth(450);
+        ImGui::InputText("##manifestLoad", options.ManifestName, sizeof(options.ManifestName));
+        ImGui::SameLine();
+        if (ImGui::Button("Browse##man"))
+        {
+            const std::array<const char*, 1> filters = { "*.bin" };
+            const char* path = tinyfd_openFileDialog("Select Manifest", "", 1, filters.data(), "Binary Manifest", 0);
+            if (path != nullptr)
+            {
+                std::string fullPath = path;
+                if (fullPath.size() > 4 && fullPath.substr(fullPath.size() - 4) == ".bin")
+                {
+                    fullPath = fullPath.substr(0, fullPath.size() - 4);
+                }
+                snprintf(options.ManifestName, sizeof(options.ManifestName), "%s", fullPath.c_str());
+            }
+        }
+    }
+
+    ImGui::Spacing();
+    
+    bool canStart = (strlen(options.DirectoryPath) > 0 && strlen(options.ManifestName) > 0);
+    if (options.IsLoadMode)
+    {
+        canStart = (strlen(options.ManifestName) > 0);
+    }
+
+    if (!canStart)
+    {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button("Start", ImVec2(120, 40)))
+    {
+        options.IsReady = true;
+    }
+    if (!canStart)
+    {
+        ImGui::EndDisabled();
+    }
+
+    ImGui::End();
     rlImGuiEnd();
 }
 

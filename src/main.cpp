@@ -59,24 +59,15 @@ int main()
     std::atomic<bool> scanComplete = false;
     std::thread scanThread;
 
-    LOG_INFO("Attempting to load graph manifest N_Drive.bin...");
-    if (!LoadGraphManifest("N_Drive", graph))
+    enum class AppState
     {
-        LOG_INFO("Manifest not found. Beginning ScanDirectory async on N:/...");
-        scanThread = std::thread(
-            [&]()
-            {
-                ScanDirectory("N:/", graph, &scanNodeCount);
-                LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
-                SaveGraphManifest("N_Drive", graph);
-                scanComplete = true;
-            });
-    }
-    else
-    {
-        LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
-        scanComplete = true;
-    }
+        Menu,
+        Scanning,
+        Simulation
+    };
+
+    AppState appState = AppState::Menu;
+    StartupOptions startupOptions;
 
     LOG_INFO("Initializing UI...");
     InitializeUI();
@@ -86,18 +77,63 @@ int main()
 
     while (!WindowShouldClose())
     {
-        if (!scanComplete)
+        if (appState == AppState::Menu)
+        {
+            BeginDrawing();
+            ClearBackground(BLACK);
+            DrawStartupMenu(startupOptions);
+            EndDrawing();
+
+            if (startupOptions.IsReady)
+            {
+                if (startupOptions.IsLoadMode)
+                {
+                    LOG_INFO("Attempting to load graph manifest %s...", startupOptions.ManifestName);
+                    if (LoadGraphManifest(startupOptions.ManifestName, graph))
+                    {
+                        LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
+                        scanComplete = true;
+                        appState = AppState::Simulation;
+                    }
+                    else
+                    {
+                        startupOptions.IsReady = false;
+                    }
+                }
+                else
+                {
+                    LOG_INFO("Beginning ScanDirectory async on %s...", startupOptions.DirectoryPath);
+                    std::string scanDir = startupOptions.DirectoryPath;
+                    std::string manifestOut = startupOptions.ManifestName;
+                    scanThread = std::thread(
+                        [&graph, &scanNodeCount, &scanComplete, scanDir, manifestOut]()
+                        {
+                            ScanDirectory(scanDir, graph, &scanNodeCount);
+                            LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
+                            SaveGraphManifest(manifestOut, graph);
+                            scanComplete = true;
+                        });
+                    appState = AppState::Scanning;
+                }
+            }
+            continue;
+        }
+        else if (appState == AppState::Scanning)
         {
             BeginDrawing();
             ClearBackground(BLACK);
             DrawLoadingScreen(scanNodeCount.load(std::memory_order_relaxed));
             EndDrawing();
-            continue;
-        }
 
-        if (scanThread.joinable())
-        {
-            scanThread.join();
+            if (scanComplete)
+            {
+                if (scanThread.joinable())
+                {
+                    scanThread.join();
+                }
+                appState = AppState::Simulation;
+            }
+            continue;
         }
 
         if (!graphStatsLogged)
@@ -238,8 +274,7 @@ int main()
             }
             if (!graph.Nodes.empty())
             {
-                strncpy(engineState.RootFolderName, graph.Nodes[0].Name, 255);
-                engineState.RootFolderName[255] = '\0';
+                snprintf(engineState.RootFolderName, sizeof(engineState.RootFolderName), "%s", graph.Nodes[0].Name);
             }
             engineState.StatsCalculated = true;
         }
@@ -250,8 +285,7 @@ int main()
             lastSelected = engineState.SelectedNodeIndex;
             if (engineState.SelectedNodeIndex != (size_t)-1 && engineState.SelectedNodeIndex < graph.Nodes.size())
             {
-                strncpy(engineState.SelectedNodeName, graph.Nodes[engineState.SelectedNodeIndex].Name, 255);
-                engineState.SelectedNodeName[255] = '\0';
+                snprintf(engineState.SelectedNodeName, sizeof(engineState.SelectedNodeName), "%s", graph.Nodes[engineState.SelectedNodeIndex].Name);
 
                 double sz = (double)graph.Nodes[engineState.SelectedNodeIndex].Mass;
                 if (sz > 1024.0 * 1024.0 * 1024.0)
@@ -265,8 +299,8 @@ int main()
             }
             else
             {
-                strncpy(engineState.SelectedNodeName, "None", 255);
-                strncpy(engineState.SelectedNodeSize, "-", 64);
+                snprintf(engineState.SelectedNodeName, sizeof(engineState.SelectedNodeName), "None");
+                snprintf(engineState.SelectedNodeSize, sizeof(engineState.SelectedNodeSize), "-");
             }
         }
 
