@@ -244,7 +244,7 @@ int main()
             command = "xdg-open \"" + pathStr + "\"";
 #endif
             LOG_INFO("Executing UI button command: %s", command.c_str());
-            std::thread([command]() { std::system(command.c_str()); }).detach();
+            std::thread([command]() { (void)std::system(command.c_str()); }).detach();
         }
 
         if (engineState.SearchTriggered && strlen(engineState.SearchQuery) > 0)

@@ -1,5 +1,7 @@
 #include "scanner.h"
 #include "logger.h"
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <filesystem>
 #include <raylib.h>
@@ -20,7 +22,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<siz
     }
 
     Node rootNode;
-    rootNode.Position = {0.0f, 0.0f, 0.0f};
+    rootNode.Position = Vector3{0.0f, 0.0f, 0.0f};
     rootNode.IsDirectory = true;
     rootNode.Depth = 0;
     std::string rootNameStr = reinterpret_cast<const char *>(root.filename().u8string().c_str());
@@ -66,7 +68,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<siz
                 size_t currentIndex = outGraph.Nodes.size();
 
                 Node childNode;
-                childNode.Position = {0.0f, 0.0f, 0.0f}; // Set during layout pass
+                childNode.Position = Vector3{0.0f, 0.0f, 0.0f}; // Set during layout pass
                 childNode.Depth = outGraph.Nodes[parentIndex].Depth + 1;
                 bool isDir = false;
                 uint64_t mass = 1;
@@ -143,7 +145,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<siz
 
     if (!outGraph.Nodes.empty())
     {
-        outGraph.Nodes[0].Position = {0.0f, 0.0f, 0.0f};
+        outGraph.Nodes[0].Position = Vector3{0.0f, 0.0f, 0.0f};
     }
 
     uint64_t rngState = 123456789ULL;
@@ -228,7 +230,7 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<siz
                 outGraph.Nodes[childIdx].OrbitSpeed * randFloat(params.jitterSpeedMin, params.jitterSpeedMax);
             outGraph.Nodes[childIdx].RadiusJitterAmp = radius * randFloat(params.jitterAmpMin, params.jitterAmpMax);
 
-            outGraph.Nodes[childIdx].Position = {
+            outGraph.Nodes[childIdx].Position = Vector3{
                 outGraph.Nodes[i].Position.x + (cosf(theta) * radius), outGraph.Nodes[i].Position.y + yOffset,
                 outGraph.Nodes[i].Position.z + (sinf(theta) * radius * (1.0f - outGraph.Nodes[childIdx].Eccentricity))};
         }
