@@ -1,5 +1,8 @@
 # Ebauche
 
+![Showcase](showcase.jpg)
+*Screenshot of my entire C drive rendered via the application. Ran on my barely alive 1050ti, hence the deltatime*
+
 An entire hard drive, rendered as a galaxy. Folders orbit each other and files glow based on size. The whole thing animates in real time.
 
 Name is a french word roughly (from what I know of French) translating to "Rough draft" or "In progress work". I believe that Ebauche can be turned into something much more impressive with some gutting, so this app remains a transitional period.
