@@ -6,7 +6,7 @@
 
 namespace fs = std::filesystem;
 
-void ScanDirectory(const std::string &rootPath, Graph &outGraph)
+void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<size_t> *progressCounter)
 {
     std::unordered_map<std::string, size_t> pathToIndex;
     fs::path root(rootPath);
@@ -92,6 +92,11 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 outGraph.Edges.push_back(edge);
             }
 
+            if (progressCounter)
+            {
+                (*progressCounter)++;
+            }
+
             if (outGraph.Nodes.size() % 10000 == 0)
             {
                 LOG_INFO("Scanned %zu nodes...", outGraph.Nodes.size());
@@ -133,22 +138,36 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
         outGraph.Nodes[0].Position = {0.0f, 0.0f, 0.0f};
     }
 
+    uint64_t rngState = 123456789ULL;
+    auto pcg32 = [&rngState]() -> uint32_t
+    {
+        const uint64_t oldState = rngState;
+        rngState = (oldState * 6364136223846793005ULL) + 1;
+        const auto xorshifted = static_cast<uint32_t>(((oldState >> 18u) ^ oldState) >> 27u);
+        const auto rot = static_cast<uint32_t>(oldState >> 59u);
+        return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+    };
+    auto nextFloat = [&pcg32]() -> float
+    { return static_cast<float>(pcg32() & 0xFFFFFF) / static_cast<float>(0xFFFFFF); };
+
     for (size_t i = 0; i < outGraph.Nodes.size(); i++)
     {
         auto &children = adj[i];
         size_t numChildren = children.size();
         if (numChildren == 0)
+        {
             continue;
+        }
 
         std::sort(children.begin(), children.end(),
                   [&outGraph](size_t a, size_t b) { return outGraph.Nodes[a].Mass > outGraph.Nodes[b].Mass; });
 
-        for (size_t c = 0; c < numChildren; c++)
+        for (size_t childIndex = 0; childIndex < numChildren; childIndex++)
         {
-            size_t childIdx = children[c];
+            size_t childIdx = children[childIndex];
 
-            float theta = static_cast<float>(GetRandomValue(0, 628318)) / 100000.0f;
-            float rRandom = static_cast<float>(GetRandomValue(0, 1000)) / 1000.0f;
+            const float theta = nextFloat() * 6.28318f;
+            const float rRandom = nextFloat();
 
             struct GalaxyParams
             {
@@ -163,47 +182,47 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph)
                 float jitterAmpMin, jitterAmpMax;
             };
 
-            GalaxyParams p;
+            GalaxyParams params;
             if (outGraph.Nodes[childIdx].IsDirectory)
             {
-                p = {10.0f, 3500.0f, 300.0f, 0.5f, 10.0f, 0.05f, 0.15f, -0.05f,
-                     0.05f, 0.3f,    0.8f,   0.9f, 1.1f,  0.05f, 0.15f};
+                params = {10.0f, 3500.0f, 300.0f, 0.5f, 10.0f, 0.05f, 0.15f, -0.05f,
+                          0.05f, 0.3f,    0.8f,   0.9f, 1.1f,  0.05f, 0.15f};
             }
             else
             {
-                p = {1.0f, 150.0f, 20.0f, 0.15f, 30.0f, 0.5f, 1.5f, -0.2f, 0.2f, 0.5f, 0.8f, 0.8f, 1.2f, 0.02f, 0.10f};
+                params = {1.0f, 150.0f, 20.0f, 0.15f, 30.0f, 0.5f,  1.5f, -0.2f,
+                          0.2f, 0.5f,   0.8f,  0.8f,  1.2f,  0.02f, 0.10f};
             }
 
-            auto randFloat = [](float min, float max)
-            { return min + (max - min) * (static_cast<float>(GetRandomValue(0, 1000)) / 1000.0f); };
+            auto randFloat = [&nextFloat](float min, float max) { return min + ((max - min) * nextFloat()); };
 
-            float r = p.rBase + ((rRandom * rRandom) * p.rMult);
-            float thick = p.thickness * (1.0f - rRandom);
+            float radius = params.rBase + ((rRandom * rRandom) * params.rMult);
+            const float thick = params.thickness * (1.0f - rRandom);
             float yOffset = randFloat(-1.0f, 1.0f) * thick;
-            float tilt = randFloat(-p.tiltLimit, p.tiltLimit);
+            float tilt = randFloat(-params.tiltLimit, params.tiltLimit);
 
             outGraph.Nodes[childIdx].ParentIndex = i;
-            outGraph.Nodes[childIdx].OrbitRadius = r;
+            outGraph.Nodes[childIdx].OrbitRadius = radius;
             outGraph.Nodes[childIdx].OrbitAngle = theta;
 
-            float keplerSpeed = p.keplerBase / sqrtf(r + 1.0f);
-            outGraph.Nodes[childIdx].OrbitSpeed = keplerSpeed * randFloat(p.orbitSpeedMin, p.orbitSpeedMax);
+            const float keplerSpeed = params.keplerBase / sqrtf(radius + 1.0f);
+            outGraph.Nodes[childIdx].OrbitSpeed = keplerSpeed * randFloat(params.orbitSpeedMin, params.orbitSpeedMax);
 
             outGraph.Nodes[childIdx].YOffset = yOffset;
             outGraph.Nodes[childIdx].OrbitTilt = tilt;
             outGraph.Nodes[childIdx].SpinAngle = randFloat(0.0f, 6.28f);
-            outGraph.Nodes[childIdx].SpinSpeed = randFloat(p.spinSpeedMin, p.spinSpeedMax);
+            outGraph.Nodes[childIdx].SpinSpeed = randFloat(params.spinSpeedMin, params.spinSpeedMax);
 
             outGraph.Nodes[childIdx].OrbitRotation = randFloat(0.0f, 6.28f);
-            outGraph.Nodes[childIdx].Eccentricity = randFloat(p.eccMin, p.eccMax);
+            outGraph.Nodes[childIdx].Eccentricity = randFloat(params.eccMin, params.eccMax);
             outGraph.Nodes[childIdx].RadiusJitterPhase = randFloat(0.0f, 6.28f);
             outGraph.Nodes[childIdx].RadiusJitterSpeed =
-                outGraph.Nodes[childIdx].OrbitSpeed * randFloat(p.jitterSpeedMin, p.jitterSpeedMax);
-            outGraph.Nodes[childIdx].RadiusJitterAmp = r * randFloat(p.jitterAmpMin, p.jitterAmpMax);
+                outGraph.Nodes[childIdx].OrbitSpeed * randFloat(params.jitterSpeedMin, params.jitterSpeedMax);
+            outGraph.Nodes[childIdx].RadiusJitterAmp = radius * randFloat(params.jitterAmpMin, params.jitterAmpMax);
 
             outGraph.Nodes[childIdx].Position = {
-                outGraph.Nodes[i].Position.x + cosf(theta) * r, outGraph.Nodes[i].Position.y + yOffset,
-                outGraph.Nodes[i].Position.z + sinf(theta) * r * (1.0f - outGraph.Nodes[childIdx].Eccentricity)};
+                outGraph.Nodes[i].Position.x + (cosf(theta) * radius), outGraph.Nodes[i].Position.y + yOffset,
+                outGraph.Nodes[i].Position.z + (sinf(theta) * radius * (1.0f - outGraph.Nodes[childIdx].Eccentricity))};
         }
     }
 

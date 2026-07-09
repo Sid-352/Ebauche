@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -23,6 +24,19 @@ static std::string FormatBytes(float bytes)
     return ss.str();
 }
 
+void DrawLoadingScreen(size_t nodesScanned)
+{
+    BeginDrawing();
+    ClearBackground({10, 10, 15, 255});
+
+    Vector2 p1 = {100.0f, 100.0f};
+    Vector2 p2 = {120.0f, 110.0f};
+    DrawText(TextFormat("Scanning Drive... %zu objects found", nodesScanned), 100, 150, 30, LIGHTGRAY);
+    DrawCircleV(p1, 4.0f, {255, 200, 0, 255});
+    DrawCircleV(p2, 4.0f, {200, 220, 255, 255});
+    EndDrawing();
+}
+
 void InitializeRenderer(RenderContext &outContext)
 {
     outContext.CameraSpeed = 400.0f;
@@ -45,6 +59,9 @@ void InitializeRenderer(RenderContext &outContext)
         GetShaderLocation(outContext.InstancingShader, "viewPos");
 
     outContext.PostProcessingShader = LoadShader(0, TextFormat("resources/shaders/glsl330/bloom.fs"));
+
+    outContext.locResolution = GetShaderLocation(outContext.PostProcessingShader, "resolution");
+    outContext.locBloomIntensity = GetShaderLocation(outContext.PostProcessingShader, "bloomIntensity");
 
     outContext.Target = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 
@@ -105,10 +122,7 @@ void UpdateCamera(RenderContext &context, EngineState &state)
         context.CameraYaw -= mouseDelta.x * 0.003f;
         context.CameraPitch -= mouseDelta.y * 0.003f;
 
-        if (context.CameraPitch > 1.5f)
-            context.CameraPitch = 1.5f;
-        if (context.CameraPitch < -1.5f)
-            context.CameraPitch = -1.5f;
+        context.CameraPitch = std::clamp(context.CameraPitch, -1.5f, 1.5f);
 
         forward.x = cosf(context.CameraPitch) * sinf(context.CameraYaw);
         forward.y = sinf(context.CameraPitch);
@@ -118,8 +132,7 @@ void UpdateCamera(RenderContext &context, EngineState &state)
     }
 
     context.CameraSpeed += GetMouseWheelMove() * (context.CameraSpeed * 0.2f);
-    if (context.CameraSpeed < 1.0f)
-        context.CameraSpeed = 1.0f;
+    context.CameraSpeed = std::max(context.CameraSpeed, 1.0f);
 
     float currentSpeed = context.CameraSpeed;
     if (IsKeyDown(KEY_LEFT_CONTROL))
@@ -190,21 +203,16 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         {
             intensity = powf((massLog - 4.0f) / 5.0f, 0.85f);
         }
-        if (intensity < 0.0f)
-            intensity = 0.0f;
+        intensity = std::max(intensity, 0.0f);
 
         if (node.IsDirectory)
         {
             int bucketIndex = 0;
             float r = 2.0f * state.SphereSizeMultiplier;
 
-            float safeIntensity = intensity;
-            if (safeIntensity > 1.0f)
-                safeIntensity = 1.0f;
+            float safeIntensity = std::min(intensity, 1.0f);
 
-            bucketIndex = (int)(safeIntensity * 9.99f);
-            if (bucketIndex > 9)
-                bucketIndex = 9;
+            bucketIndex = std::min((int)(safeIntensity * 9.99f), 9);
 
             if (massLog <= 4.0f)
             {
@@ -244,9 +252,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         else
         {
             float t = intensity;
-            float safeT = intensity;
-            if (safeT > 1.0f)
-                safeT = 1.0f;
+            float safeT = std::min(intensity, 1.0f);
 
             float hue = 280.0f - (safeT * 260.0f);
             if (hue < 0.0f)
@@ -284,6 +290,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         Vector3 camRight = {cosf(context.CameraYaw), 0.0f, -sinf(context.CameraYaw)};
         Vector3 camUp = Vector3CrossProduct(camForward, camRight);
 
+        rlDisableDepthMask();
         rlDisableBackfaceCulling();
         rlBegin(RL_TRIANGLES);
         float wrapSize = 6000.0f;
@@ -325,6 +332,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         }
         rlEnd();
         rlEnableBackfaceCulling();
+        rlEnableDepthMask();
     }
 
     for (int i = 0; i < 10; i++)
@@ -345,6 +353,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         Vector3 camRight = {cosf(context.CameraYaw), 0.0f, -sinf(context.CameraYaw)};
         Vector3 camUp = Vector3CrossProduct(camForward, camRight);
 
+        rlDisableDepthMask();
         rlDisableBackfaceCulling();
         rlBegin(RL_QUADS);
         for (const auto &pt : context.filePoints)
@@ -370,6 +379,7 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
         }
         rlEnd();
         rlEnableBackfaceCulling();
+        rlEnableDepthMask();
     }
 
     EndMode3D();
@@ -383,12 +393,10 @@ void DrawScene(RenderContext &context, EngineState &state, const Graph &graph)
     ClearBackground(BLACK);
 
     float resolution[2] = {(float)GetScreenWidth(), (float)GetScreenHeight()};
-    SetShaderValue(context.PostProcessingShader, GetShaderLocation(context.PostProcessingShader, "resolution"),
-                   resolution, SHADER_UNIFORM_VEC2);
+    SetShaderValue(context.PostProcessingShader, context.locResolution, resolution, SHADER_UNIFORM_VEC2);
 
     float bInt = state.BloomIntensity;
-    SetShaderValue(context.PostProcessingShader, GetShaderLocation(context.PostProcessingShader, "bloomIntensity"),
-                   &bInt, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(context.PostProcessingShader, context.locBloomIntensity, &bInt, SHADER_UNIFORM_FLOAT);
 
     BeginShaderMode(context.PostProcessingShader);
     DrawTextureRec(context.Target.texture,

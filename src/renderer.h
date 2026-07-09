@@ -25,6 +25,8 @@ struct RenderContext
     Color DirColors[10];
     RenderTexture2D Target;
     Shader PostProcessingShader;
+    int locResolution;
+    int locBloomIntensity;
 
     std::vector<ColoredPoint> backgroundStars;
     std::vector<Matrix> dirTransforms[10];
@@ -34,4 +36,5 @@ struct RenderContext
 void InitializeRenderer(RenderContext &outContext);
 void UpdateCamera(RenderContext &context, EngineState &state);
 void DrawScene(RenderContext &context, EngineState &state, const Graph &graph);
+void DrawLoadingScreen(size_t nodesScanned);
 void ShutdownRenderer(RenderContext &context);

@@ -6,12 +6,14 @@
 #include "scanner.h"
 #include "ui_overlay.h"
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
 #include <raylib.h>
 #include <raymath.h>
 #include <string>
+#include <thread>
 
 static bool icontains(const char *text, const std::string &query)
 {
@@ -53,22 +55,56 @@ int main()
     InitializeRenderer(renderContext);
 
     Graph graph;
-    LOG_INFO("Attempting to load graph manifest N_Others.bin...");
-    if (!LoadGraphManifest("N_Others", graph))
+    std::atomic<size_t> scanNodeCount = 0;
+    std::atomic<bool> scanComplete = false;
+    std::thread scanThread;
+
+    LOG_INFO("Attempting to load graph manifest N_Drive.bin...");
+    if (!LoadGraphManifest("N_Drive", graph))
     {
-        LOG_INFO("Manifest not found. Beginning ScanDirectory on N:/Others...");
-        ScanDirectory("N:/Others", graph);
-        LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
-        SaveGraphManifest("N_Others", graph);
+        LOG_INFO("Manifest not found. Beginning ScanDirectory async on N:/...");
+        scanThread = std::thread(
+            [&]()
+            {
+                ScanDirectory("N:/", graph, &scanNodeCount);
+                LOG_INFO("ScanDirectory complete. Attempting to save binary manifest...");
+                SaveGraphManifest("N_Drive", graph);
+                scanComplete = true;
+            });
     }
-    LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
+    else
+    {
+        LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
+        scanComplete = true;
+    }
 
     LOG_INFO("Initializing UI...");
     InitializeUI();
     LOG_INFO("Entering main render loop...");
 
+    bool graphStatsLogged = false;
+
     while (!WindowShouldClose())
     {
+        if (!scanComplete)
+        {
+            BeginDrawing();
+            ClearBackground(BLACK);
+            DrawLoadingScreen(scanNodeCount.load(std::memory_order_relaxed));
+            EndDrawing();
+            continue;
+        }
+
+        if (scanThread.joinable())
+        {
+            scanThread.join();
+        }
+
+        if (!graphStatsLogged)
+        {
+            LOG_INFO("Graph setup complete. Nodes: %zu, Edges: %zu", graph.Nodes.size(), graph.Edges.size());
+            graphStatsLogged = true;
+        }
         engineState.DeltaTime = GetFrameTime();
         engineState.GlobalTime += engineState.DeltaTime;
 
@@ -100,7 +136,44 @@ int main()
                 if (dx * dx + dy * dy + dz * dz > maxDistSqr)
                     continue;
 
+                float massLog = log10f((float)node.Mass + 1.0f);
+                float intensity = massLog / 10.0f;
                 float r = 2.0f;
+
+                if (node.IsDirectory)
+                {
+                    float safeIntensity = intensity > 1.0f ? 1.0f : intensity;
+                    if (massLog <= 4.0f)
+                    {
+                        r = 3.0f * engineState.SphereSizeMultiplier;
+                    }
+                    else
+                    {
+                        float invIntensity = 1.0f - safeIntensity;
+                        r = (3.0f + invIntensity * 5.0f) * engineState.SphereSizeMultiplier;
+                        if (intensity > 1.1f)
+                            r *= 1.5f;
+                        if (massLog >= 9.0f)
+                        {
+                            float extraScale = 1.0f + (massLog - 9.0f) * 2.5f;
+                            r *= extraScale;
+                        }
+                    }
+                }
+                else
+                {
+                    float safeT = intensity > 1.0f ? 1.0f : intensity;
+                    float size = 0.8f + (safeT * 3.5f * engineState.FileSizeMultiplier);
+                    if (massLog >= 9.0f)
+                    {
+                        float extraScale = 1.0f + (massLog - 9.0f) * 2.5f;
+                        size *= extraScale;
+                    }
+                    r = size;
+                }
+
+                r = std::max(r, 2.0f);
+
                 RayCollision collision = GetRayCollisionSphere(ray, node.Position, r);
                 if (collision.hit && collision.distance < closestHit)
                 {
@@ -208,6 +281,11 @@ int main()
     ShutdownRenderer(renderContext);
     ShutdownLogger();
     CloseWindow();
+
+    if (scanThread.joinable())
+    {
+        scanThread.join();
+    }
 
     return 0;
 }

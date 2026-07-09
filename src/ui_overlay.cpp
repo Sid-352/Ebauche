@@ -13,8 +13,9 @@ void DrawUI(EngineState &state)
     if (state.IsZenModeEnabled)
     {
         rlImGuiBegin();
-        ImGuiWindowFlags zenFlags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar |
-                                    ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs;
+        ImGuiWindowFlags const zenFlags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar |
+                                          ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                          ImGuiWindowFlags_NoInputs;
         ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f));
         ImGui::SetNextWindowSize(ImVec2(300.0f, 50.0f));
         ImGui::Begin("ZenHUD", nullptr, zenFlags);
@@ -43,7 +44,7 @@ void DrawUI(EngineState &state)
     ImGui::Checkbox("Show Selection Popup", &state.ShowSelectionPopup);
 
     ImGui::Separator();
-    bool searchChanged = ImGui::InputText("Search File", state.SearchQuery, sizeof(state.SearchQuery));
+    bool const searchChanged = ImGui::InputText("Search File", state.SearchQuery, sizeof(state.SearchQuery));
     ImGui::SameLine();
     if (ImGui::Button("Next"))
     {
@@ -63,8 +64,8 @@ void DrawUI(EngineState &state)
 
     ImGui::End();
 
-    ImGuiWindowFlags hudFlags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar |
-                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs;
+    ImGuiWindowFlags const hudFlags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar |
+                                      ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs;
     ImGui::SetNextWindowPos(ImVec2(GetScreenWidth() - 270.0f, 40.0f));
     ImGui::SetNextWindowSize(ImVec2(260.0f, 400.0f));
     ImGui::Begin("InfoHUD", nullptr, hudFlags);
@@ -78,12 +79,16 @@ void DrawUI(EngineState &state)
     ImGui::Text("%-16s %zu", "Files:", state.TotalFiles);
     ImGui::Text("%-16s %zu", "Directories:", state.TotalDirs);
 
-    double sizeTB = (double)state.TotalSize / (1024.0 * 1024.0 * 1024.0 * 1024.0);
-    double sizeGB = (double)state.TotalSize / (1024.0 * 1024.0 * 1024.0);
+    const double sizeTB = static_cast<double>(state.TotalSize) / (1024.0 * 1024.0 * 1024.0 * 1024.0);
+    const double sizeGB = static_cast<double>(state.TotalSize) / (1024.0 * 1024.0 * 1024.0);
     if (sizeTB >= 1.0)
+    {
         ImGui::Text("%-16s %.2f TB", "Total Mass:", sizeTB);
+    }
     else
+    {
         ImGui::Text("%-16s %.2f GB", "Total Mass:", sizeGB);
+    }
 
     ImGui::Dummy(ImVec2(0, 10));
 

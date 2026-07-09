@@ -10,9 +10,9 @@ static FILE *s_LogFile = nullptr;
 
 void LogMessage(LogLevel level, const char *file, int line, const char *fmt, ...)
 {
-    std::lock_guard<std::mutex> lock(s_LogMutex);
+    std::lock_guard<std::mutex> const lock(s_LogMutex);
 
-    if (!s_LogFile)
+    if (s_LogFile == nullptr)
     {
         s_LogFile = fopen("ebauche.log", "w");
     }
@@ -33,7 +33,7 @@ void LogMessage(LogLevel level, const char *file, int line, const char *fmt, ...
         break;
     }
 
-    time_t now = time(nullptr);
+    time_t const now = time(nullptr);
     struct tm tstruct;
     localtime_s(&tstruct, &now);
     char timebuf[80];
@@ -46,7 +46,7 @@ void LogMessage(LogLevel level, const char *file, int line, const char *fmt, ...
     va_end(args);
 
     printf("[%s] [%s] %s:%d - %s\n", timebuf, levelStr, file, line, messagebuf);
-    if (s_LogFile)
+    if (s_LogFile != nullptr)
     {
         fprintf(s_LogFile, "[%s] [%s] %s:%d - %s\n", timebuf, levelStr, file, line, messagebuf);
         fflush(s_LogFile);
@@ -55,8 +55,8 @@ void LogMessage(LogLevel level, const char *file, int line, const char *fmt, ...
 
 void ShutdownLogger()
 {
-    std::lock_guard<std::mutex> lock(s_LogMutex);
-    if (s_LogFile)
+    std::lock_guard<std::mutex> const lock(s_LogMutex);
+    if (s_LogFile != nullptr)
     {
         fclose(s_LogFile);
         s_LogFile = nullptr;
