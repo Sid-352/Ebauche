@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <raylib.h>
 #include <unordered_map>
+#include <cstdio>
 
 namespace fs = std::filesystem;
 
@@ -24,8 +25,8 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<siz
     std::string rootNameStr = reinterpret_cast<const char *>(root.filename().u8string().c_str());
     if (rootNameStr.empty())
         rootNameStr = canonicalRoot;
-    strncpy_s(rootNode.Name, sizeof(rootNode.Name), rootNameStr.c_str(), _TRUNCATE);
-    strncpy_s(rootNode.Path, sizeof(rootNode.Path), canonicalRoot.c_str(), _TRUNCATE);
+    snprintf(rootNode.Name, sizeof(rootNode.Name), "%s", rootNameStr.c_str());
+    snprintf(rootNode.Path, sizeof(rootNode.Path), "%s", canonicalRoot.c_str());
 
     outGraph.Nodes.push_back(rootNode);
     pathToIndex[canonicalRoot] = 0;
@@ -80,8 +81,8 @@ void ScanDirectory(const std::string &rootPath, Graph &outGraph, std::atomic<siz
                 childNode.IsDirectory = isDir;
                 childNode.Mass = mass;
                 std::string childNameStr = reinterpret_cast<const char *>(entry.path().filename().u8string().c_str());
-                strncpy_s(childNode.Name, sizeof(childNode.Name), childNameStr.c_str(), _TRUNCATE);
-                strncpy_s(childNode.Path, sizeof(childNode.Path), currentPath.c_str(), _TRUNCATE);
+                snprintf(childNode.Name, sizeof(childNode.Name), "%s", childNameStr.c_str());
+                snprintf(childNode.Path, sizeof(childNode.Path), "%s", currentPath.c_str());
 
                 outGraph.Nodes.push_back(childNode);
                 pathToIndex[currentPath] = currentIndex;

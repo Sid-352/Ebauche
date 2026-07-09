@@ -71,7 +71,7 @@ void DrawUI(EngineState &state)
     ImGui::End();
 
     ImGuiWindowFlags const hudFlags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar |
-                                      ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs;
+                                      ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
     ImGui::SetNextWindowPos(ImVec2(GetScreenWidth() - 270.0f, 40.0f));
     ImGui::SetNextWindowSize(ImVec2(260.0f, 400.0f));
     ImGui::Begin("InfoHUD", nullptr, hudFlags);
@@ -105,6 +105,17 @@ void DrawUI(EngineState &state)
     ImGui::Text("%-15s %s", "Sector:", state.SelectedNodeName);
     ImGui::Text("%-15s %s", "Mass:", state.SelectedNodeSize);
     ImGui::Text("%-15s %zu", "Visible:", state.VisibleObjects);
+    
+    if (state.SelectedNodeIndex != (size_t)-1)
+    {
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        if (ImGui::Button("Open in OS", ImVec2(-1, 30)))
+        {
+            state.OpenFile = true;
+        }
+    }
 
     ImGui::PopStyleColor();
     ImGui::End();

@@ -29,4 +29,5 @@ struct EngineState
     char SelectedNodeName[256] = "None";
     char SelectedNodeSize[64] = "0 B";
     size_t VisibleObjects = 0;
+    bool OpenFile = false;
 };

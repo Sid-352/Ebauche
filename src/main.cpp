@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <raylib.h>
 #include <raymath.h>
@@ -222,6 +223,22 @@ int main()
                 engineState.SelectedNodeIndex = (size_t)-1;
             else if (newSelection != (size_t)-1)
                 engineState.SelectedNodeIndex = newSelection;
+        }
+
+        if (engineState.OpenFile && engineState.SelectedNodeIndex != (size_t)-1)
+        {
+            engineState.OpenFile = false;
+            std::string pathStr = graph.Nodes[engineState.SelectedNodeIndex].Path;
+            std::string command;
+#if defined(_WIN32)
+            command = "explorer \"" + pathStr + "\"";
+#elif defined(__APPLE__)
+            command = "open \"" + pathStr + "\"";
+#else
+            command = "xdg-open \"" + pathStr + "\"";
+#endif
+            LOG_INFO("Executing UI button command: %s", command.c_str());
+            std::system(command.c_str());
         }
 
         if (engineState.SearchTriggered && strlen(engineState.SearchQuery) > 0)
